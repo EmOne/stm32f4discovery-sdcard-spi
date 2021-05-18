@@ -71,6 +71,7 @@ UINT br, bw;  // File read/write count
 FATFS *pfs;
 DWORD fre_clust;
 uint32_t total, free_space;
+volatile uint32_t SD_Detect = 1;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -151,17 +152,17 @@ int main(void)
   MX_TIM10_Init();
   MX_USART2_UART_Init();
   MX_FATFS_Init();
-
   /* USER CODE BEGIN 2 */
   /* Mount SD card */
   HAL_GPIO_WritePin(LD4_GPIO_Port, LD4_Pin, GPIO_PIN_SET);
+  while (SD_Detect){};
 	fresult = f_mount(&fs, "/", 1);
 	if (fresult != FR_OK) {
 		send_uart("err: SD Card mounting failure.....\n");
 		Error_Handler();
 	} else {
 		send_uart("info: SD Card mounted successfully.....\n");
-		HAL_GPIO_WritePin(LD4_GPIO_Port, LD4_Pin, GPIO_PIN_SET);
+		HAL_GPIO_WritePin(LD5_GPIO_Port, LD5_Pin, GPIO_PIN_SET);
 	}
 
 	/* Check free space */
@@ -608,6 +609,9 @@ static void MX_GPIO_Init(void)
   HAL_GPIO_WritePin(OTG_FS_PowerSwitchOn_GPIO_Port, OTG_FS_PowerSwitchOn_Pin, GPIO_PIN_SET);
 
   /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(SD_CS_GPIO_Port, SD_CS_Pin, GPIO_PIN_SET);
+
+  /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOD, LD4_Pin|LD3_Pin|LD5_Pin|LD6_Pin
                           |Audio_RST_Pin, GPIO_PIN_RESET);
 
@@ -627,7 +631,7 @@ static void MX_GPIO_Init(void)
 
   /*Configure GPIO pin : SD_CD_Pin */
   GPIO_InitStruct.Pin = SD_CD_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
+  GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING_FALLING;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(SD_CD_GPIO_Port, &GPIO_InitStruct);
 
@@ -659,6 +663,13 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Alternate = GPIO_AF5_SPI2;
   HAL_GPIO_Init(CLK_IN_GPIO_Port, &GPIO_InitStruct);
 
+  /*Configure GPIO pin : SD_CS_Pin */
+  GPIO_InitStruct.Pin = SD_CS_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(SD_CS_GPIO_Port, &GPIO_InitStruct);
+
   /*Configure GPIO pins : LD4_Pin LD3_Pin LD5_Pin LD6_Pin
                            Audio_RST_Pin */
   GPIO_InitStruct.Pin = LD4_Pin|LD3_Pin|LD5_Pin|LD6_Pin
@@ -681,7 +692,21 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
-
+void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
+{
+ switch (GPIO_Pin) {
+	case GPIO_PIN_1:
+		if(HAL_GPIO_ReadPin(SD_CD_GPIO_Port, SD_CD_Pin) == GPIO_PIN_SET){
+			SD_Detect = 1;
+		}
+		else{
+			SD_Detect = 0;
+		}
+		break;
+	default:
+		break;
+}
+}
 /* USER CODE END 4 */
 
 /**
