@@ -1,0 +1,132 @@
+<!DOCTYPE CrossStudio_Project_File>
+<solution Name="project" target="8" version="2">
+  <project Name="stm32f4discovery-sdcard-spi">
+    <configuration
+      Name="Common"
+      Placement="Flash"
+      arm_linker_jtag_pad_pre_dr="1"
+      arm_linker_jtag_pad_pre_ir="5"
+      arm_simulator_memory_simulation_filename="$(TargetsDir)/STM32/STM32SimulatorMemory$(HostDLL)"
+      arm_target_loader_applicable_loaders="Flash"
+      arm_target_loader_default_loader="Flash"
+      arm_target_trace_interface_type="None"
+      build_toolchain_directory="$(ARMGCCDIR)"
+      c_system_include_directories="$(ARMGCCDIR)/../arm-none-eabi/include;$(ARMGCCDIR)/../lib/gcc/arm-none-eabi/$(ARMGCCVERSION)/include;$(ARMGCCDIR)/../lib/gcc/arm-none-eabi/$(ARMGCCVERSION)/include-fixed;$(ARMGCCDIR)/../arm-none-eabi/include/c++/$(ARMGCCVERSION);$(ARMGCCDIR)/../arm-none-eabi/include/c++/$(ARMGCCVERSION)/bits"
+      gcc_prefix="$(ARMGCCPREFIX)"
+      linker_section_placement_file="$(StudioDir)/targets/Cortex_M/flash_placement.xml"
+      project_directory=""
+      project_type="Executable"
+      property_groups_file_path="$(TargetsDir)/STM32/propertyGroups.xml"
+      target_get_partname_script="GetPartName()"
+      target_match_partname_script="MatchPartName(&quot;$(Target)&quot;)"
+      target_script_file="$(TargetsDir)/STM32/STM32_Target.js"
+      target_trace_initialize_script="EnableTrace(&quot;$(TraceInterfaceType)&quot;)"
+      use_external_gcc="Yes" />
+    <configuration Name="RAM" target_reset_script="Reset()" />
+    <configuration
+      Name="Flash"
+      arm_target_flash_loader_file_path="$(LOADER:$(TargetsDir)/STM32/Release/STM32F2xx_Loader_rpc.elf)"
+      arm_target_loader_can_erase_all="Yes"
+      arm_target_loader_can_lock_all="No"
+      arm_target_loader_can_lock_range="No"
+      arm_target_loader_can_unlock_all="No"
+      arm_target_loader_can_unlock_range="No"
+      target_reset_script="FLASHReset()" />
+    <configuration
+      Name="Debug"
+      Target="STM32F407VG"
+      arm_architecture="v7EM"
+      arm_core_type="Cortex-M4"
+      arm_fp_abi="Hard"
+      arm_fpu_type="FPv4-SP-D16"
+      arm_simulator_memory_simulation_parameter="STM32F407VG;0x100000;0x20000"
+      build_intermediate_directory="Debug"
+      build_output_directory="Debug"
+      build_output_file_name="Debug/stm32f4discovery-sdcard-spi.elf"
+      c_preprocessor_definitions="DEBUG;USE_HAL_DRIVER;STM32F407xx"
+      c_user_include_directories="$(ProjectDir)/USB_HOST/App;$(ProjectDir)/USB_HOST/Target;$(ProjectDir)/Core/Inc;$(ProjectDir)/Drivers/STM32F4xx_HAL_Driver/Inc;$(ProjectDir)/Drivers/STM32F4xx_HAL_Driver/Inc/Legacy;$(ProjectDir)/Middlewares/ST/STM32_USB_Host_Library/Core/Inc;$(ProjectDir)/Middlewares/ST/STM32_USB_Host_Library/Class/CDC/Inc;$(ProjectDir)/Drivers/CMSIS/Device/ST/STM32F4xx/Include;$(ProjectDir)/Drivers/CMSIS/Include;$(ProjectDir)/FATFS/Target;$(ProjectDir)/FATFS/App;$(ProjectDir)/Middlewares/Third_Party/FatFs/src"
+      debug_register_definition_file="$(TargetsDir)/STM32/STM32F407_Peripherals.xml"
+      gcc_debugging_level="Level 3"
+      gcc_optimization_level="Optimize For Size"
+      linker_additional_files=""
+      linker_additional_options=";-Wl,--gc-sections;-lm;--specs=nosys.specs;--specs=nano.specs"
+      linker_memory_map_file="$(TargetsDir)/STM32/STM32F407VG_MemoryMap.xml"
+      macros="DeviceVectorsFile=STM32F407xx.vec"
+      target_script_file="$(TargetsDir)/STM32/STM32_Target.js" />
+    <configuration
+      Name="Release"
+      Target="STM32F407VG"
+      arm_architecture="v7EM"
+      arm_core_type="Cortex-M4"
+      arm_fp_abi="Hard"
+      arm_fpu_type="FPv4-SP-D16"
+      arm_simulator_memory_simulation_parameter="STM32F407VG;0x100000;0x20000"
+      build_intermediate_directory="Release"
+      build_output_directory="Release"
+      build_output_file_name="Release/stm32f4discovery-sdcard-spi.elf"
+      c_preprocessor_definitions="USE_HAL_DRIVER;STM32F407xx"
+      c_user_include_directories="$(ProjectDir)/USB_HOST/App;$(ProjectDir)/USB_HOST/Target;$(ProjectDir)/Core/Inc;$(ProjectDir)/Drivers/STM32F4xx_HAL_Driver/Inc;$(ProjectDir)/Drivers/STM32F4xx_HAL_Driver/Inc/Legacy;$(ProjectDir)/Middlewares/ST/STM32_USB_Host_Library/Core/Inc;$(ProjectDir)/Middlewares/ST/STM32_USB_Host_Library/Class/CDC/Inc;$(ProjectDir)/Drivers/CMSIS/Device/ST/STM32F4xx/Include;$(ProjectDir)/Drivers/CMSIS/Include;$(ProjectDir)/FATFS/Target;$(ProjectDir)/FATFS/App;$(ProjectDir)/Middlewares/Third_Party/FatFs/src"
+      debug_register_definition_file="$(TargetsDir)/STM32/STM32F407_Peripherals.xml"
+      gcc_debugging_level="None"
+      gcc_optimization_level="Optimize For Size"
+      linker_additional_files=""
+      linker_additional_options=";-Wl,--gc-sections;-lm;--specs=nosys.specs;--specs=nano.specs"
+      linker_memory_map_file="$(TargetsDir)/STM32/STM32F407VG_MemoryMap.xml"
+      macros="DeviceVectorsFile=STM32F407xx.vec"
+      target_script_file="$(TargetsDir)/STM32/STM32_Target.js" />
+    <file file_name="$(ProjectDir)//STM32F407VGTX_FLASH.ld">
+      <configuration Name="Common" build_exclude_from_build="Yes" />
+      <configuration Name="Debug" build_exclude_from_build="No" />
+    </file>
+    <file file_name="$(ProjectDir)//STM32F407VGTX_FLASH.ld">
+      <configuration Name="Common" build_exclude_from_build="Yes" />
+      <configuration Name="Release" build_exclude_from_build="No" />
+    </file>
+    <folder Name="Source Files" />
+    <folder
+      Name="USB_HOST"
+      exclude="USB_HOST/"
+      filter="*.c;*.h;*.cpp;*.hpp;*.s;*.S"
+      path="USB_HOST"
+      recurse="Yes" />
+    <folder
+      Name="Core"
+      exclude="Core/"
+      filter="*.c;*.h;*.cpp;*.hpp;*.s;*.S"
+      path="Core"
+      recurse="Yes" />
+    <folder
+      Name="FATFS"
+      exclude="FATFS/"
+      filter="*.c;*.h;*.cpp;*.hpp;*.s;*.S"
+      path="FATFS"
+      recurse="Yes" />
+    <folder
+      Name="Middlewares"
+      exclude="Middlewares/"
+      filter="*.c;*.h;*.cpp;*.hpp;*.s;*.S"
+      path="Middlewares"
+      recurse="Yes" />
+    <folder
+      Name="Drivers"
+      exclude="Drivers/"
+      filter="*.c;*.h;*.cpp;*.hpp;*.s;*.S"
+      path="Drivers"
+      recurse="Yes" />
+    <file file_name="Core/Startup/startup_stm32f407vgtx.s" />
+  </project>
+  <configuration
+    Name="Debug"
+    c_preprocessor_definitions="DEBUG"
+    gcc_debugging_level="Level 3"
+    gcc_omit_frame_pointer="Yes"
+    gcc_optimization_level="None"
+    hidden="No" />
+  <configuration
+    Name="Release"
+    c_preprocessor_definitions="NDEBUG"
+    gcc_debugging_level="None"
+    gcc_omit_frame_pointer="Yes"
+    gcc_optimization_level="Level 1"
+    hidden="No" />
+</solution>

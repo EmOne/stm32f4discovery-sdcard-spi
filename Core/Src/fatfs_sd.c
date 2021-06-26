@@ -45,6 +45,15 @@ static void SPI_TxByte(BYTE data)
   HAL_SPI_Transmit(&hspi2, &data, 1, SPI_TIMEOUT);
 }
 
+static void SPI_TxBuffer(BYTE data, size_t len)
+{
+  while (HAL_SPI_GetState(&hspi2) != HAL_SPI_STATE_READY);
+  if(len < 10)
+	  HAL_SPI_Transmit(&hspi2, &data, 1, SPI_TIMEOUT);
+  else
+	  HAL_SPI_Transmit_DMA(&hspi2, &data, len);
+}
+
 /* SPI 데이터 송수신 리턴형 함수 */
 static uint8_t SPI_RxByte(void)
 {
