@@ -1,5 +1,5 @@
 <!DOCTYPE CrossStudio_Project_File>
-<solution Name="project" target="8" version="2">
+<solution Name="stm32f4discovery-sdcard-spi" target="8" version="2">
   <project Name="stm32f4discovery-sdcard-spi">
     <configuration
       Name="Common"

@@ -13,10 +13,9 @@
  <Memory3/>
  <Memory4/>
  <Project>
-  <ProjectSessionItem path="project"/>
-  <ProjectSessionItem path="project;stm32f4discovery-sdcard-spi"/>
-  <ProjectSessionItem path="project;stm32f4discovery-sdcard-spi;Core"/>
-  <ProjectSessionItem path="project;stm32f4discovery-sdcard-spi;Core;Src"/>
+  <ProjectSessionItem path="stm32f4discovery-sdcard-spi"/>
+  <ProjectSessionItem path="stm32f4discovery-sdcard-spi;stm32f4discovery-sdcard-spi"/>
+  <ProjectSessionItem path="stm32f4discovery-sdcard-spi;stm32f4discovery-sdcard-spi;Core"/>
  </Project>
  <Register1/>
  <Register2/>
@@ -42,7 +41,8 @@
   <Watches active="0" update="Never"/>
  </Watch4>
  <Files>
-  <SessionOpenFile windowGroup="DockEditLeft" x="0" y="31" useTextEdit="1" openedFrom="" useBinaryEdit="0" left="0" path="Core/Src/syscalls.c" selected="1" top="17" codecName="Default"/>
+  <SessionOpenFile windowGroup="DockEditLeft" x="0" y="31" useTextEdit="1" openedFrom="" useBinaryEdit="0" left="0" path="Core/Src/syscalls.c" selected="0" top="17" codecName="Default"/>
+  <SessionOpenFile windowGroup="DockEditLeft" x="0" y="0" useTextEdit="1" openedFrom="" useBinaryEdit="0" left="0" path="Core/Src/main.c" selected="0" top="201" codecName="Default"/>
  </Files>
  <ARMCrossStudioWindow activeProject="stm32f4discovery-sdcard-spi" fileDialogDefaultFilter="*.c;*.cpp;*.cxx;*.cc;*.h;*.hpp;*.hxx" autoConnectTarget="ST-LINK/V2" buildConfiguration="Debug" sessionSettings="" debugSearchFileMap="" fileDialogInitialDirectory="" debugSearchPath="" autoConnectCapabilities="266111"/>
 </session>
