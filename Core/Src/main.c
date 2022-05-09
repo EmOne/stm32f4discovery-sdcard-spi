@@ -24,6 +24,7 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include "stm32f4_discovery.h"
 #include "fatfs_sd.h"
 #include "string.h"
 #include "stdio.h"
@@ -81,7 +82,7 @@ FATFS *pfs;
 DWORD fre_clust;
 uint32_t total, free_space;
 volatile uint32_t SD_Detect = 1;
-uint32_t USER_press = 0;
+volatile uint32_t USER_press = 0;
 
 // Variables
 volatile uint32_t		time_var1, time_var2;
@@ -188,7 +189,7 @@ int main(void)
   MX_I2C1_Init();
   MX_I2S3_Init();
   MX_SPI1_Init();
-  MX_USB_HOST_Init();
+//  MX_USB_HOST_Init();
   MX_ADC1_Init();
   MX_RTC_Init();
   MX_SPI2_Init();
@@ -200,14 +201,14 @@ int main(void)
   /* USER CODE BEGIN 2 */
   /* Mount SD card */
   HAL_GPIO_WritePin(LD4_GPIO_Port, LD4_Pin, GPIO_PIN_SET);
-  while (SD_Detect) {
+  do {
 	  HAL_Delay(500);
 	  if(HAL_GPIO_ReadPin(SD_CD_GPIO_Port, SD_CD_Pin) == GPIO_PIN_RESET) {
 		  HAL_Delay(500);
 		  SD_Detect = 0;
 		  enum_done = 2;
 	  }
-  };
+  } while (SD_Detect) ;
 	fresult = f_mount(&fs, "/", 1);
 	if (fresult != FR_OK) {
 		send_uart("err: SD Card mounting failure.....\r\n");
@@ -243,13 +244,13 @@ int main(void)
   while (1)
   {
     /* USER CODE END WHILE */
-    MX_USB_HOST_Process();
+//    MX_USB_HOST_Process();
 
     /* USER CODE BEGIN 3 */
-	if (enum_done >= 2) {
-		enum_done = 0;
+//	if (enum_done >= 2) {
+//		enum_done = 0;
 		play_directory("", 0);
-	}
+//	}
   }
   /* USER CODE END 3 */
 }
@@ -911,7 +912,7 @@ static FRESULT play_directory (const char* path, unsigned char seek) {
 	char buffer[200];
 #if _USE_LFN
 	static TCHAR lfn[_MAX_LFN + 1];
-//	fno.fname = lfn;
+	strncpy(fno.fname, lfn, sizeof(fno.fname));
 	fno.fsize = sizeof(lfn);
 #endif
 
@@ -931,7 +932,9 @@ static FRESULT play_directory (const char* path, unsigned char seek) {
 
 			} else { /* It is a file. */
 				sprintf(buffer, "%s/%s", path, fn);
+				send_uart("Playing->");
 				send_uart(buffer);
+				send_uart("\r\n");
 				// Check if it is an mp3 file
 				if (strcmp("mp3", get_filename_ext(buffer)) == 0) {
 
@@ -942,6 +945,9 @@ static FRESULT play_directory (const char* path, unsigned char seek) {
 					}
 
 					play_mp3(buffer);
+				} else
+				{
+					send_uart("This file isn't mp3\r\n");
 				}
 			}
 		}
@@ -971,9 +977,9 @@ static void play_mp3(char* filename) {
 		{
 			// Play mp3
 			hMP3Decoder = MP3InitDecoder();
-			InitializeAudio(Audio44100HzSettings);
-			SetAudioVolume(0xAF);
-			PlayAudioWithCallback(AudioCallback, 0);
+			InitializeAudio(Audio48000HzSettings);
+			SetAudioVolume(75);
+			PlayAudioWithCallback(AudioCallback, NULL);
 
 			for(;;) {
 				/*
@@ -1004,14 +1010,14 @@ static void play_mp3(char* filename) {
 						StopAudio();
 
 						// Re-initialize and set volume to avoid noise
-						InitializeAudio(Audio44100HzSettings);
+						InitializeAudio(Audio48000HzSettings);
 						SetAudioVolume(0);
 
 						// Close currently open file
 						f_close(&file);
 
 						// Wait for user button release
-						while(USER_press);
+						while(!USER_press);
 
 						// Return to previous function
 						return;

@@ -32,7 +32,9 @@ extern "C" {
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include "stm32f4_discovery.h"
+#include "stm32f4_discovery_audio.h"
+#include "stm32f4_discovery_accelerometer.h"
 /* USER CODE END Includes */
 
 /* Exported types ------------------------------------------------------------*/
