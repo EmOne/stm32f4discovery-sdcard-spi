@@ -20,6 +20,7 @@
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include "fatfs.h"
+#include "pdm2pcm.h"
 #include "usb_host.h"
 
 /* Private includes ----------------------------------------------------------*/
@@ -50,10 +51,14 @@
  ADC_HandleTypeDef hadc1;
 DMA_HandleTypeDef hdma_adc1;
 
+CRC_HandleTypeDef hcrc;
+
 I2C_HandleTypeDef hi2c1;
 
 I2S_HandleTypeDef hi2s3;
 DMA_HandleTypeDef hdma_spi3_tx;
+
+RNG_HandleTypeDef hrng;
 
 RTC_HandleTypeDef hrtc;
 
@@ -67,6 +72,7 @@ TIM_HandleTypeDef htim4;
 TIM_HandleTypeDef htim10;
 
 UART_HandleTypeDef huart2;
+UART_HandleTypeDef huart3;
 
 /* USER CODE BEGIN PV */
 FATFS fs;  // file system
@@ -81,7 +87,7 @@ FATFS *pfs;
 DWORD fre_clust;
 uint32_t total, free_space;
 volatile uint32_t SD_Detect = 1;
-uint32_t USER_press = 0;
+volatile uint32_t USER_press = 0;
 
 // Variables
 volatile uint32_t		time_var1, time_var2;
@@ -115,6 +121,9 @@ static void MX_TIM10_Init(void);
 static void MX_USART2_UART_Init(void);
 static void MX_TIM3_Init(void);
 static void MX_TIM4_Init(void);
+static void MX_CRC_Init(void);
+static void MX_RNG_Init(void);
+static void MX_USART3_UART_Init(void);
 void MX_USB_HOST_Process(void);
 
 /* USER CODE BEGIN PFP */
@@ -197,6 +206,10 @@ int main(void)
   MX_FATFS_Init();
   MX_TIM3_Init();
   MX_TIM4_Init();
+  MX_CRC_Init();
+  MX_RNG_Init();
+  MX_USART3_UART_Init();
+  MX_PDM2PCM_Init();
   /* USER CODE BEGIN 2 */
   /* Mount SD card */
   HAL_GPIO_WritePin(LD4_GPIO_Port, LD4_Pin, GPIO_PIN_SET);
@@ -246,10 +259,10 @@ int main(void)
     MX_USB_HOST_Process();
 
     /* USER CODE BEGIN 3 */
-	if (enum_done >= 2) {
-		enum_done = 0;
+//	if (enum_done >= 2) {
+//		enum_done = 0;
 		play_directory("", 0);
-	}
+//	}
   }
   /* USER CODE END 3 */
 }
@@ -362,6 +375,33 @@ static void MX_ADC1_Init(void)
 }
 
 /**
+  * @brief CRC Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_CRC_Init(void)
+{
+
+  /* USER CODE BEGIN CRC_Init 0 */
+
+  /* USER CODE END CRC_Init 0 */
+
+  /* USER CODE BEGIN CRC_Init 1 */
+
+  /* USER CODE END CRC_Init 1 */
+  hcrc.Instance = CRC;
+  if (HAL_CRC_Init(&hcrc) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  __HAL_CRC_DR_RESET(&hcrc);
+  /* USER CODE BEGIN CRC_Init 2 */
+
+  /* USER CODE END CRC_Init 2 */
+
+}
+
+/**
   * @brief I2C1 Initialization Function
   * @param None
   * @retval None
@@ -415,7 +455,7 @@ static void MX_I2S3_Init(void)
   hi2s3.Init.Standard = I2S_STANDARD_PHILIPS;
   hi2s3.Init.DataFormat = I2S_DATAFORMAT_16B;
   hi2s3.Init.MCLKOutput = I2S_MCLKOUTPUT_ENABLE;
-  hi2s3.Init.AudioFreq = I2S_AUDIOFREQ_96K;
+  hi2s3.Init.AudioFreq = I2S_AUDIOFREQ_48K;
   hi2s3.Init.CPOL = I2S_CPOL_LOW;
   hi2s3.Init.ClockSource = I2S_CLOCK_PLL;
   hi2s3.Init.FullDuplexMode = I2S_FULLDUPLEXMODE_DISABLE;
@@ -426,6 +466,32 @@ static void MX_I2S3_Init(void)
   /* USER CODE BEGIN I2S3_Init 2 */
 
   /* USER CODE END I2S3_Init 2 */
+
+}
+
+/**
+  * @brief RNG Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_RNG_Init(void)
+{
+
+  /* USER CODE BEGIN RNG_Init 0 */
+
+  /* USER CODE END RNG_Init 0 */
+
+  /* USER CODE BEGIN RNG_Init 1 */
+
+  /* USER CODE END RNG_Init 1 */
+  hrng.Instance = RNG;
+  if (HAL_RNG_Init(&hrng) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN RNG_Init 2 */
+
+  /* USER CODE END RNG_Init 2 */
 
 }
 
@@ -730,6 +796,39 @@ static void MX_USART2_UART_Init(void)
 }
 
 /**
+  * @brief USART3 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_USART3_UART_Init(void)
+{
+
+  /* USER CODE BEGIN USART3_Init 0 */
+
+  /* USER CODE END USART3_Init 0 */
+
+  /* USER CODE BEGIN USART3_Init 1 */
+
+  /* USER CODE END USART3_Init 1 */
+  huart3.Instance = USART3;
+  huart3.Init.BaudRate = 115200;
+  huart3.Init.WordLength = UART_WORDLENGTH_8B;
+  huart3.Init.StopBits = UART_STOPBITS_1;
+  huart3.Init.Parity = UART_PARITY_NONE;
+  huart3.Init.Mode = UART_MODE_TX_RX;
+  huart3.Init.HwFlowCtl = UART_HWCONTROL_NONE;
+  huart3.Init.OverSampling = UART_OVERSAMPLING_16;
+  if (HAL_UART_Init(&huart3) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN USART3_Init 2 */
+
+  /* USER CODE END USART3_Init 2 */
+
+}
+
+/**
   * Enable DMA controller clock
   */
 static void MX_DMA_Init(void)
@@ -824,14 +923,6 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(BOOT1_GPIO_Port, &GPIO_InitStruct);
-
-  /*Configure GPIO pin : CLK_IN_Pin */
-  GPIO_InitStruct.Pin = CLK_IN_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-  GPIO_InitStruct.Alternate = GPIO_AF5_SPI2;
-  HAL_GPIO_Init(CLK_IN_GPIO_Port, &GPIO_InitStruct);
 
   /*Configure GPIO pin : SD_CS_Pin */
   GPIO_InitStruct.Pin = SD_CS_Pin;
@@ -931,7 +1022,9 @@ static FRESULT play_directory (const char* path, unsigned char seek) {
 
 			} else { /* It is a file. */
 				sprintf(buffer, "%s/%s", path, fn);
+				send_uart("Playback: ");
 				send_uart(buffer);
+
 				// Check if it is an mp3 file
 				if (strcmp("mp3", get_filename_ext(buffer)) == 0) {
 
@@ -942,7 +1035,14 @@ static FRESULT play_directory (const char* path, unsigned char seek) {
 					}
 
 					play_mp3(buffer);
+					send_uart(" -> Done!!!");
+					// Wait for user button release
+					while(!USER_press);
+
 				}
+				else
+					send_uart(" -> This file isn't MP3 file!!!");
+				send_uart("\r\n");
 			}
 		}
 	}
@@ -971,8 +1071,9 @@ static void play_mp3(char* filename) {
 		{
 			// Play mp3
 			hMP3Decoder = MP3InitDecoder();
-			InitializeAudio(Audio44100HzSettings);
-			SetAudioVolume(0xAF);
+			InitializeAudio(Audio48000HzSettings);
+			SetAudioVolume(0xFF);
+			AudioOn();
 			PlayAudioWithCallback(AudioCallback, 0);
 
 			for(;;) {
@@ -1004,14 +1105,11 @@ static void play_mp3(char* filename) {
 						StopAudio();
 
 						// Re-initialize and set volume to avoid noise
-						InitializeAudio(Audio44100HzSettings);
+						InitializeAudio(Audio48000HzSettings);
 						SetAudioVolume(0);
-
+						AudioOff();
 						// Close currently open file
 						f_close(&file);
-
-						// Wait for user button release
-						while(USER_press);
 
 						// Return to previous function
 						return;
@@ -1272,7 +1370,18 @@ static uint32_t Mp3ReadId3V2Tag(FIL* pInFile, char* pszArtist, uint32_t unArtist
 	return 0;
 }
 
+void HAL_I2S_TxHalfCpltCallback(I2S_HandleTypeDef *hi2s)
+{
 
+}
+void HAL_I2S_TxCpltCallback(I2S_HandleTypeDef *hi2s)
+{
+	AudioDMA_IRQHandler();
+}
+void HAL_I2S_ErrorCallback(I2S_HandleTypeDef *hi2s)
+{
+	Error_Handler();
+}
 /* USER CODE END 4 */
 
 /**
