@@ -249,6 +249,9 @@ int main(void)
 //
 //	/* Close file */
 //	fresult = f_close(&fil);
+	InitializeAudio(Audio48000HzSettings);
+	SetAudioVolume(50);
+	AudioOn();
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -289,8 +292,8 @@ void SystemClock_Config(void)
   RCC_OscInitStruct.LSIState = RCC_LSI_ON;
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
   RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSE;
-  RCC_OscInitStruct.PLL.PLLM = 8;
-  RCC_OscInitStruct.PLL.PLLN = 336;
+  RCC_OscInitStruct.PLL.PLLM = 4;
+  RCC_OscInitStruct.PLL.PLLN = 168;
   RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV2;
   RCC_OscInitStruct.PLL.PLLQ = 7;
   if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
@@ -455,7 +458,7 @@ static void MX_I2S3_Init(void)
   hi2s3.Init.Standard = I2S_STANDARD_PHILIPS;
   hi2s3.Init.DataFormat = I2S_DATAFORMAT_16B;
   hi2s3.Init.MCLKOutput = I2S_MCLKOUTPUT_ENABLE;
-  hi2s3.Init.AudioFreq = I2S_AUDIOFREQ_48K;
+  hi2s3.Init.AudioFreq = I2S_AUDIOFREQ_16K;
   hi2s3.Init.CPOL = I2S_CPOL_LOW;
   hi2s3.Init.ClockSource = I2S_CLOCK_PLL;
   hi2s3.Init.FullDuplexMode = I2S_FULLDUPLEXMODE_DISABLE;
@@ -1034,11 +1037,13 @@ static FRESULT play_directory (const char* path, unsigned char seek) {
 						continue;
 					}
 
+
+
 					play_mp3(buffer);
 					send_uart(" -> Done!!!");
 					// Wait for user button release
-					while(!USER_press);
-
+//					while(!USER_press);
+					HAL_Delay(1000);
 				}
 				else
 					send_uart(" -> This file isn't MP3 file!!!");
@@ -1071,9 +1076,6 @@ static void play_mp3(char* filename) {
 		{
 			// Play mp3
 			hMP3Decoder = MP3InitDecoder();
-			InitializeAudio(Audio48000HzSettings);
-			SetAudioVolume(0xFF);
-			AudioOn();
 			PlayAudioWithCallback(AudioCallback, 0);
 
 			for(;;) {
@@ -1102,12 +1104,12 @@ static void play_mp3(char* filename) {
 
 					// Out of data or error or user button... Stop playback!
 					if (br < btr || res != FR_OK || USER_press) {
-						StopAudio();
-
-						// Re-initialize and set volume to avoid noise
-						InitializeAudio(Audio48000HzSettings);
-						SetAudioVolume(0);
-						AudioOff();
+//						StopAudio();
+//
+//						// Re-initialize and set volume to avoid noise
+//						InitializeAudio(Audio48000HzSettings);
+//						SetAudioVolume(0);
+//						AudioOff();
 						// Close currently open file
 						f_close(&file);
 
@@ -1370,16 +1372,19 @@ static uint32_t Mp3ReadId3V2Tag(FIL* pInFile, char* pszArtist, uint32_t unArtist
 	return 0;
 }
 
+uint8_t dma_tx = 0;
 void HAL_I2S_TxHalfCpltCallback(I2S_HandleTypeDef *hi2s)
 {
 
 }
 void HAL_I2S_TxCpltCallback(I2S_HandleTypeDef *hi2s)
 {
+	dma_tx=0;
 	AudioDMA_IRQHandler();
 }
 void HAL_I2S_ErrorCallback(I2S_HandleTypeDef *hi2s)
 {
+	dma_tx=0;
 	Error_Handler();
 }
 /* USER CODE END 4 */

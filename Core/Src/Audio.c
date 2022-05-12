@@ -15,11 +15,13 @@ static volatile int BufferNumber;
 static volatile bool DMARunning;
 struct CS43_STATUS_T cs43_status = {0};
 static volatile uint8_t done = 0;
-static uint8_t vol = 100;
+static uint8_t vol = 50;
 
 extern I2C_HandleTypeDef hi2c1;
 
 extern I2S_HandleTypeDef hi2s3;
+
+extern uint8_t dma_tx;
 
 void InitializeAudio(int plln, int pllr, int i2sdiv, int i2sodd) {
 	// Intitialize state.
@@ -33,6 +35,9 @@ void InitializeAudio(int plln, int pllr, int i2sdiv, int i2sodd) {
 	__HAL_RCC_DMA1_CLK_ENABLE();
 	__HAL_RCC_SPI3_CLK_ENABLE();
 	__HAL_RCC_I2C1_CLK_ENABLE();
+	__HAL_RCC_GPIOA_CLK_ENABLE();
+	__HAL_RCC_GPIOC_CLK_ENABLE();
+	__HAL_RCC_GPIOD_CLK_ENABLE();
 
 	// Reset the codec.
 	HAL_GPIO_WritePin(Audio_RST_GPIO_Port, Audio_RST_Pin, GPIO_PIN_RESET);
@@ -139,7 +144,7 @@ void OutputAudioSampleWithoutBlocking(int16_t sample) {
 void PlayAudioWithCallback(AudioCallbackFunction *callback, void *context) {
 	StopAudioDMA();
 
-	HAL_I2S_DMAResume(&hi2s3);
+//	HAL_I2S_DMAResume(&hi2s3);
 //	NVIC_EnableIRQ(DMA1_Stream7_IRQn);
 //	NVIC_SetPriority(DMA1_Stream7_IRQn, 4);
 //
@@ -169,8 +174,8 @@ bool ProvideAudioBufferWithoutBlocking(void *samples, int numsamples) {
 	if (NextBufferSamples)
 		return false;
 
-	HAL_I2S_DMAPause(&hi2s3);
 //	NVIC_DisableIRQ(DMA1_Stream7_IRQn);
+//	HAL_I2S_DMAPause(&hi2s3);
 
 	NextBufferSamples = samples;
 	NextBufferLength = numsamples;
@@ -178,7 +183,7 @@ bool ProvideAudioBufferWithoutBlocking(void *samples, int numsamples) {
 	if (!DMARunning)
 		StartAudioDMAAndRequestBuffers();
 
-	HAL_I2S_DMAResume(&hi2s3);
+//	HAL_I2S_DMAResume(&hi2s3);
 //	NVIC_EnableIRQ(DMA1_Stream7_IRQn);
 
 	return true;
@@ -222,8 +227,7 @@ static void StartAudioDMAAndRequestBuffers() {
 //	DMA1_Stream7 ->M0AR = (uint32_t) NextBufferSamples;
 //	DMA1_Stream7 ->FCR = DMA_SxFCR_DMDIS;
 //	DMA1_Stream7 ->CR |= DMA_SxCR_EN;
-	HAL_I2S_DMAStop(&hi2s3);
-
+	dma_tx = 1;
 	HAL_I2S_Transmit_DMA(&hi2s3, (uint16_t*) NextBufferSamples, NextBufferLength);
 
 	// Update state.
@@ -245,7 +249,7 @@ static void StopAudioDMA() {
 }
 
 void AudioDMA_IRQHandler() {
-	DMA1 ->HIFCR |= DMA_HIFCR_CTCIF7; // Clear interrupt flag.
+//	DMA1 ->HIFCR |= DMA_HIFCR_CTCIF7; // Clear interrupt flag.
 
 	if (NextBufferSamples) {
 		StartAudioDMAAndRequestBuffers();

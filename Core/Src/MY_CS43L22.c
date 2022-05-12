@@ -24,6 +24,7 @@ References:
 static uint8_t iData[4];
 I2C_HandleTypeDef* i2cx;
 extern I2S_HandleTypeDef hi2s3;
+extern DMA_HandleTypeDef hdma_spi3_tx;
 uint8_t id;
 uint8_t rev;
 uint8_t vp, spk_status, status;
@@ -53,8 +54,16 @@ void CS43_Init(I2C_HandleTypeDef* i2c_handle, CS43_MODE outputMode)
 {
 //	__HAL_UNLOCK(&hi2s3);     // THIS IS EXTREMELY IMPORTANT FOR I2S3 TO WORK!!
 //	__HAL_I2S_ENABLE(&hi2s3); // THIS IS EXTREMELY IMPORTANT FOR I2S3 TO WORK!!
+	//(1): Get the I2C handle
+	i2cx = i2c_handle;
 
-	HAL_I2S_DMAResume(&hi2s3);
+	if (i2cx == NULL) {
+		Error_Handler();
+	}
+
+	HAL_I2C_Init(i2cx);
+	HAL_I2S_Init(&hi2s3);
+	HAL_DMA_Init(&hdma_spi3_tx);
 
 	HAL_GPIO_WritePin(GPIOD, GPIO_PIN_4, GPIO_PIN_RESET);
 
@@ -63,9 +72,6 @@ void CS43_Init(I2C_HandleTypeDef* i2c_handle, CS43_MODE outputMode)
 	}
 
 	HAL_GPIO_WritePin(GPIOD, GPIO_PIN_4, GPIO_PIN_SET);
-
-	//(1): Get the I2C handle
-	i2cx = i2c_handle;
 
 	//(2): Power down
 	iData[1] = 0x01;
@@ -132,7 +138,7 @@ void CS43_Init(I2C_HandleTypeDef* i2c_handle, CS43_MODE outputMode)
 	//(9-1): Gain headphone and speaker
 	read_register(PLAYBACK_CONTROL_1, &iData[1]);
 	iData[1] |= (3 << 5);	//Headphone Analog Gain 011 (default)
-	iData[1] |= (1 << 4);	//Playback Volume Setting B=A
+	iData[1] &= ~(1 << 4);	//Playback Volume Setting B=A
 	iData[1] &= ~(3 << 0);	//Master Playback Mute OFF
 	write_register(PLAYBACK_CONTROL_1,&iData[1]);
 
@@ -142,7 +148,7 @@ void CS43_Init(I2C_HandleTypeDef* i2c_handle, CS43_MODE outputMode)
 	iData[1] |= (3 << 4);	//SP Mute enable
 	iData[1] |= (1 << 3);	//SP A=B
 	iData[1] &= ~(1 << 2);	//Not swap channel
-	iData[1] &= ~(1 << 1);	//Mono
+	iData[1] |= (1 << 1);	//Mono
 	iData[1] &= ~(1 << 0);	//Disable mute 50/50
 	write_register(PLAYBACK_CONTROL_2,&iData[1]);
 
