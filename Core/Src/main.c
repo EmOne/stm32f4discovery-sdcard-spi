@@ -208,7 +208,8 @@ int main(void)
 //
 //	/* Close file */
 //	fresult = f_close(&fil);
-
+	InitializeAudio(Audio48000HzSettings);
+				AudioOn();
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -391,8 +392,7 @@ static void play_mp3(char* filename) {
 		{
 			// Play mp3
 			hMP3Decoder = MP3InitDecoder();
-			InitializeAudio(Audio48000HzSettings);
-			AudioOn();
+
 			PlayAudioWithCallback(AudioCallback, NULL);
 
 			for(;;) {
@@ -426,7 +426,7 @@ static void play_mp3(char* filename) {
 //						// Re-initialize and set volume to avoid noise
 //						InitializeAudio(Audio48000HzSettings);
 //						SetAudioVolume(0);
-						AudioOff();
+//						AudioOff();
 						// Close currently open file
 						f_close(&file);
 
@@ -505,7 +505,7 @@ static void AudioCallback(void *context, int buffer) {
 		}
 	}
 
-	sprintf(show_byte_left, "\r\n remain %d bytes", bytes_left);
+	sprintf(show_byte_left, "\r\n remain %d bytes : %d ", bytes_left, offset);
 	send_uart(show_byte_left);
 
 	if (!outOfData) {

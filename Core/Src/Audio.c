@@ -138,14 +138,13 @@ void OutputAudioSampleWithoutBlocking(int16_t sample) {
 }
 
 void PlayAudioWithCallback(AudioCallbackFunction *callback, void *context) {
-//	StopAudioDMA();
-
-	DMARunning = false;
+	StopAudioDMA();
 
 	HAL_NVIC_SetPriority(DMA1_Stream7_IRQn, 0, 0);
 	NVIC_EnableIRQ(DMA1_Stream7_IRQn);
 
 //	SPI3 ->CR2 |= SPI_CR2_TXDMAEN; // Enable I2S TX DMA request.
+	HAL_I2S_DMAResume(&hi2s3);
 
 	CallbackFunction = callback;
 	CallbackContext = context;
@@ -160,7 +159,7 @@ void StopAudio() {
 //	SPI3 ->CR2 &= ~SPI_CR2_TXDMAEN; // Disable I2S TX DMA request.
 //	NVIC_DisableIRQ(DMA1_Stream7_IRQn);
 	CallbackFunction = NULL;
-	HAL_I2S_DeInit(&hi2s3);
+//	HAL_I2S_DeInit(&hi2s3);
 }
 
 void ProvideAudioBuffer(void *samples, int numsamples) {
@@ -238,7 +237,7 @@ static void StopAudioDMA() {
 //	DMA1_Stream7 ->CR &= ~DMA_SxCR_EN; // Disable DMA stream.
 //	while (DMA1_Stream7 ->CR & DMA_SxCR_EN )
 //		; // Wait for DMA stream to stop.
-	HAL_I2S_DMAStop(&hi2s3);
+	HAL_I2S_DMAPause(&hi2s3);
 
 	DMARunning = false;
 }
