@@ -52,18 +52,12 @@ static void read_register(uint8_t reg, uint8_t *data)
 // Function(1): Initialisation
 void CS43_Init(I2C_HandleTypeDef* i2c_handle, CS43_MODE outputMode)
 {
-//	__HAL_UNLOCK(&hi2s3);     // THIS IS EXTREMELY IMPORTANT FOR I2S3 TO WORK!!
-//	__HAL_I2S_ENABLE(&hi2s3); // THIS IS EXTREMELY IMPORTANT FOR I2S3 TO WORK!!
 	//(1): Get the I2C handle
 	i2cx = i2c_handle;
 
 	if (i2cx == NULL) {
 		Error_Handler();
 	}
-
-	HAL_I2C_Init(i2cx);
-	HAL_I2S_Init(&hi2s3);
-	HAL_DMA_Init(&hdma_spi3_tx);
 
 	HAL_GPIO_WritePin(GPIOD, GPIO_PIN_4, GPIO_PIN_RESET);
 

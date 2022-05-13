@@ -3,6 +3,10 @@
 #include "MY_CS43L22.h"
 #include <stdlib.h>
 
+#include "dma.h"
+#include "i2s.h"
+#include "i2c.h"
+
 //static void WriteRegister(uint8_t address, uint8_t value);
 static void StartAudioDMAAndRequestBuffers();
 static void StopAudioDMA();
@@ -14,14 +18,12 @@ static volatile int NextBufferLength;
 static volatile int BufferNumber;
 static volatile bool DMARunning;
 struct CS43_STATUS_T cs43_status = {0};
-static volatile uint8_t done = 0;
-static uint8_t vol = 50;
 
 extern I2C_HandleTypeDef hi2c1;
 
 extern I2S_HandleTypeDef hi2s3;
 
-extern uint8_t dma_tx;
+extern DMA_HandleTypeDef hdma_spi3_tx;
 
 void InitializeAudio(int plln, int pllr, int i2sdiv, int i2sodd) {
 	// Intitialize state.
@@ -32,23 +34,17 @@ void InitializeAudio(int plln, int pllr, int i2sdiv, int i2sodd) {
 	BufferNumber = 0;
 	DMARunning = false;
 
-	__HAL_RCC_DMA1_CLK_ENABLE();
-	__HAL_RCC_SPI3_CLK_ENABLE();
-	__HAL_RCC_I2C1_CLK_ENABLE();
-	__HAL_RCC_GPIOA_CLK_ENABLE();
-	__HAL_RCC_GPIOC_CLK_ENABLE();
-	__HAL_RCC_GPIOD_CLK_ENABLE();
-
-	// Reset the codec.
-	HAL_GPIO_WritePin(Audio_RST_GPIO_Port, Audio_RST_Pin, GPIO_PIN_RESET);
-	for (volatile int i = 0; i < 0x4fff; i++) {
-		__asm__ volatile("nop");
-	}
-	HAL_GPIO_WritePin(Audio_RST_GPIO_Port, Audio_RST_Pin, GPIO_PIN_SET);
+	MX_I2C1_Init();
 
 	CS43_Init(&hi2c1, MODE_I2S);
+	CS43_SetVolume(75);
 	CS43_Enable_RightLeft(CS43_RIGHT_LEFT);
 
+	__HAL_RCC_DMA1_CLK_ENABLE();
+	HAL_NVIC_SetPriority(DMA1_Stream7_IRQn, 0, 0);
+	HAL_NVIC_EnableIRQ(DMA1_Stream7_IRQn);
+
+	MX_I2S3_Init();
 	// Reset I2C.
 //	RCC_APB1PeriphResetCmd(RCC_APB1Periph_I2C1, ENABLE);
 //	RCC_APB1PeriphResetCmd(RCC_APB1Periph_I2C1, DISABLE);
@@ -142,12 +138,13 @@ void OutputAudioSampleWithoutBlocking(int16_t sample) {
 }
 
 void PlayAudioWithCallback(AudioCallbackFunction *callback, void *context) {
-	StopAudioDMA();
+//	StopAudioDMA();
 
-//	HAL_I2S_DMAResume(&hi2s3);
-//	NVIC_EnableIRQ(DMA1_Stream7_IRQn);
-//	NVIC_SetPriority(DMA1_Stream7_IRQn, 4);
-//
+	DMARunning = false;
+
+	HAL_NVIC_SetPriority(DMA1_Stream7_IRQn, 0, 0);
+	NVIC_EnableIRQ(DMA1_Stream7_IRQn);
+
 //	SPI3 ->CR2 |= SPI_CR2_TXDMAEN; // Enable I2S TX DMA request.
 
 	CallbackFunction = callback;
@@ -163,6 +160,7 @@ void StopAudio() {
 //	SPI3 ->CR2 &= ~SPI_CR2_TXDMAEN; // Disable I2S TX DMA request.
 //	NVIC_DisableIRQ(DMA1_Stream7_IRQn);
 	CallbackFunction = NULL;
+	HAL_I2S_DeInit(&hi2s3);
 }
 
 void ProvideAudioBuffer(void *samples, int numsamples) {
@@ -174,17 +172,14 @@ bool ProvideAudioBufferWithoutBlocking(void *samples, int numsamples) {
 	if (NextBufferSamples)
 		return false;
 
-//	NVIC_DisableIRQ(DMA1_Stream7_IRQn);
-//	HAL_I2S_DMAPause(&hi2s3);
-
 	NextBufferSamples = samples;
 	NextBufferLength = numsamples;
 
-	if (!DMARunning)
+	if (!DMARunning) {
+		NVIC_DisableIRQ(DMA1_Stream7_IRQn);	
 		StartAudioDMAAndRequestBuffers();
-
-//	HAL_I2S_DMAResume(&hi2s3);
-//	NVIC_EnableIRQ(DMA1_Stream7_IRQn);
+	}
+	NVIC_EnableIRQ(DMA1_Stream7_IRQn);
 
 	return true;
 }
@@ -226,8 +221,7 @@ static void StartAudioDMAAndRequestBuffers() {
 //	DMA1_Stream7 ->PAR = (uint32_t) &SPI3 ->DR;
 //	DMA1_Stream7 ->M0AR = (uint32_t) NextBufferSamples;
 //	DMA1_Stream7 ->FCR = DMA_SxFCR_DMDIS;
-//	DMA1_Stream7 ->CR |= DMA_SxCR_EN;
-	dma_tx = 1;
+
 	HAL_I2S_Transmit_DMA(&hi2s3, (uint16_t*) NextBufferSamples, NextBufferLength);
 
 	// Update state.
@@ -245,6 +239,7 @@ static void StopAudioDMA() {
 //	while (DMA1_Stream7 ->CR & DMA_SxCR_EN )
 //		; // Wait for DMA stream to stop.
 	HAL_I2S_DMAStop(&hi2s3);
+
 	DMARunning = false;
 }
 
