@@ -185,7 +185,8 @@ void MP3GetLastFrameInfo(HMP3Decoder hMP3Decoder, MP3FrameInfo *mp3FrameInfo)
 {
 	MP3DecInfo *mp3DecInfo = (MP3DecInfo *)hMP3Decoder;
 
-	if (!mp3DecInfo || mp3DecInfo->layer != 3) {
+	if (!mp3DecInfo) {
+//		if (!mp3DecInfo || mp3DecInfo->layer != 3) {
 		mp3FrameInfo->bitrate = 0;
 		mp3FrameInfo->nChans = 0;
 		mp3FrameInfo->samprate = 0;

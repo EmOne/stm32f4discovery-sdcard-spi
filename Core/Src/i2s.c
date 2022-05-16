@@ -43,7 +43,7 @@ void MX_I2S3_Init(void)
   hi2s3.Init.Standard = I2S_STANDARD_PHILIPS;
   hi2s3.Init.DataFormat = I2S_DATAFORMAT_16B;
   hi2s3.Init.MCLKOutput = I2S_MCLKOUTPUT_ENABLE;
-  hi2s3.Init.AudioFreq = I2S_AUDIOFREQ_11K;
+  hi2s3.Init.AudioFreq = I2S_AUDIOFREQ_48K;
   hi2s3.Init.CPOL = I2S_CPOL_LOW;
   hi2s3.Init.ClockSource = I2S_CLOCK_PLL;
   hi2s3.Init.FullDuplexMode = I2S_FULLDUPLEXMODE_DISABLE;
@@ -71,7 +71,7 @@ void HAL_I2S_MspInit(I2S_HandleTypeDef* i2sHandle)
   /** Initializes the peripherals clock
   */
     PeriphClkInitStruct.PeriphClockSelection = RCC_PERIPHCLK_I2S;
-    PeriphClkInitStruct.PLLI2S.PLLI2SN = 128;
+    PeriphClkInitStruct.PLLI2S.PLLI2SN = 96;
     PeriphClkInitStruct.PLLI2S.PLLI2SR = 2;
     if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInitStruct) != HAL_OK)
     {
@@ -113,7 +113,7 @@ void HAL_I2S_MspInit(I2S_HandleTypeDef* i2sHandle)
     hdma_spi3_tx.Init.PeriphDataAlignment = DMA_PDATAALIGN_HALFWORD;
     hdma_spi3_tx.Init.MemDataAlignment = DMA_MDATAALIGN_HALFWORD;
     hdma_spi3_tx.Init.Mode = DMA_NORMAL;
-    hdma_spi3_tx.Init.Priority = DMA_PRIORITY_LOW;
+    hdma_spi3_tx.Init.Priority = DMA_PRIORITY_MEDIUM;
     hdma_spi3_tx.Init.FIFOMode = DMA_FIFOMODE_ENABLE;
     hdma_spi3_tx.Init.FIFOThreshold = DMA_FIFO_THRESHOLD_FULL;
     hdma_spi3_tx.Init.MemBurst = DMA_MBURST_SINGLE;
@@ -125,9 +125,6 @@ void HAL_I2S_MspInit(I2S_HandleTypeDef* i2sHandle)
 
     __HAL_LINKDMA(i2sHandle,hdmatx,hdma_spi3_tx);
 
-    /* I2S3 interrupt Init */
-    HAL_NVIC_SetPriority(SPI3_IRQn, 0, 0);
-    HAL_NVIC_EnableIRQ(SPI3_IRQn);
   /* USER CODE BEGIN SPI3_MspInit 1 */
 
   /* USER CODE END SPI3_MspInit 1 */
@@ -157,9 +154,6 @@ void HAL_I2S_MspDeInit(I2S_HandleTypeDef* i2sHandle)
 
     /* I2S3 DMA DeInit */
     HAL_DMA_DeInit(i2sHandle->hdmatx);
-
-    /* I2S3 interrupt Deinit */
-    HAL_NVIC_DisableIRQ(SPI3_IRQn);
   /* USER CODE BEGIN SPI3_MspDeInit 1 */
 
   /* USER CODE END SPI3_MspDeInit 1 */

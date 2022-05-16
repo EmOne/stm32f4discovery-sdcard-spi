@@ -16,7 +16,7 @@ static void *CallbackContext;
 static int16_t * volatile NextBufferSamples;
 static volatile int NextBufferLength;
 static volatile int BufferNumber;
-static volatile bool DMARunning;
+extern volatile bool DMARunning;
 struct CS43_STATUS_T cs43_status = {0};
 
 extern I2C_HandleTypeDef hi2c1;
@@ -36,15 +36,16 @@ void InitializeAudio(int plln, int pllr, int i2sdiv, int i2sodd) {
 
 	MX_I2C1_Init();
 
-	CS43_Init(&hi2c1, MODE_I2S);
-	CS43_SetVolume(75);
-	CS43_Enable_RightLeft(CS43_RIGHT_LEFT);
+		CS43_Init(&hi2c1, MODE_I2S);
+		CS43_SetVolume(75);
+		CS43_Enable_RightLeft(CS43_RIGHT_LEFT);
 
-	__HAL_RCC_DMA1_CLK_ENABLE();
-	HAL_NVIC_SetPriority(DMA1_Stream7_IRQn, 0, 0);
-	HAL_NVIC_EnableIRQ(DMA1_Stream7_IRQn);
+		__HAL_RCC_DMA1_CLK_ENABLE();
 
-	MX_I2S3_Init();
+		MX_I2S3_Init();
+
+		MX_DMA_Init();
+
 	// Reset I2C.
 //	RCC_APB1PeriphResetCmd(RCC_APB1Periph_I2C1, ENABLE);
 //	RCC_APB1PeriphResetCmd(RCC_APB1Periph_I2C1, DISABLE);
@@ -108,7 +109,9 @@ void InitializeAudio(int plln, int pllr, int i2sdiv, int i2sodd) {
 }
 
 void AudioOn() {
+	HAL_I2S_DMAResume(&hi2s3);
 	CS43_Start();
+
 //	WriteRegister(0x02, 0x9e);
 //	SPI3 ->I2SCFGR = SPI_I2SCFGR_I2SMOD | SPI_I2SCFGR_I2SCFG_1
 //			| SPI_I2SCFGR_I2SE; // Master transmitter, Phillips mode, 16 bit values, clock polarity low, enable.
@@ -116,6 +119,7 @@ void AudioOn() {
 
 void AudioOff() {
 	CS43_Stop();
+	StopAudio();
 //	WriteRegister(0x02, 0x01);
 //	SPI3 ->I2SCFGR = 0;
 }
@@ -143,21 +147,24 @@ void PlayAudioWithCallback(AudioCallbackFunction *callback, void *context) {
 	HAL_NVIC_SetPriority(DMA1_Stream7_IRQn, 0, 0);
 	NVIC_EnableIRQ(DMA1_Stream7_IRQn);
 
-//	SPI3 ->CR2 |= SPI_CR2_TXDMAEN; // Enable I2S TX DMA request.
-	HAL_I2S_DMAResume(&hi2s3);
+	SPI3 ->CR2 |= SPI_CR2_TXDMAEN; // Enable I2S TX DMA request.
+//	HAL_I2S_DMAResume(&hi2s3);
 
 	CallbackFunction = callback;
 	CallbackContext = context;
 	BufferNumber = 0;
 
-	if (CallbackFunction)
-		CallbackFunction(CallbackContext, BufferNumber);
+	if (CallbackFunction) {
+		if(CallbackFunction(CallbackContext, BufferNumber)){
+//			DMARunning = false;
+		}
+	}
 }
 
 void StopAudio() {
 	StopAudioDMA();
-//	SPI3 ->CR2 &= ~SPI_CR2_TXDMAEN; // Disable I2S TX DMA request.
-//	NVIC_DisableIRQ(DMA1_Stream7_IRQn);
+	SPI3 ->CR2 &= ~SPI_CR2_TXDMAEN; // Disable I2S TX DMA request.
+	NVIC_DisableIRQ(DMA1_Stream7_IRQn);
 	CallbackFunction = NULL;
 //	HAL_I2S_DeInit(&hi2s3);
 }
@@ -175,10 +182,12 @@ bool ProvideAudioBufferWithoutBlocking(void *samples, int numsamples) {
 	NextBufferLength = numsamples;
 
 	if (!DMARunning) {
-		NVIC_DisableIRQ(DMA1_Stream7_IRQn);	
+		NVIC_DisableIRQ(DMA1_Stream7_IRQn);
+//		NVIC_DisableIRQ(SPI3_IRQn);
 		StartAudioDMAAndRequestBuffers();
 	}
 	NVIC_EnableIRQ(DMA1_Stream7_IRQn);
+//	NVIC_EnableIRQ(SPI3_IRQn);
 
 	return true;
 }
@@ -209,42 +218,52 @@ bool ProvideAudioBufferWithoutBlocking(void *samples, int numsamples) {
 
 static void StartAudioDMAAndRequestBuffers() {
 	// Configure DMA stream.
-//	DMA1_Stream7 ->CR = (0 * DMA_SxCR_CHSEL_0 ) | // Channel 0
-//			(1 * DMA_SxCR_PL_0 ) | // Priority 1
-//			(1 * DMA_SxCR_PSIZE_0 ) | // PSIZE = 16 bit
-//			(1 * DMA_SxCR_MSIZE_0 ) | // MSIZE = 16 bit
-//			DMA_SxCR_MINC | // Increase memory address
-//			(1 * DMA_SxCR_DIR_0 ) | // Memory to peripheral
-//			DMA_SxCR_TCIE; // Transfer complete interrupt
-//	DMA1_Stream7 ->NDTR = NextBufferLength;
-//	DMA1_Stream7 ->PAR = (uint32_t) &SPI3 ->DR;
-//	DMA1_Stream7 ->M0AR = (uint32_t) NextBufferSamples;
-//	DMA1_Stream7 ->FCR = DMA_SxFCR_DMDIS;
 
-	HAL_I2S_Transmit_DMA(&hi2s3, (uint16_t*) NextBufferSamples, NextBufferLength);
-
+//	if(HAL_I2S_Transmit_DMA(&hi2s3, (uint16_t*) NextBufferSamples, NextBufferLength) != HAL_OK)
+//	{
+//
+//	}
+	__HAL_I2S_ENABLE(&hi2s3);
+	SPI3 ->CR2 |= SPI_CR2_TXDMAEN; // Enable I2S TX DMA request.
+	DMA1_Stream7 ->CR = (0 * DMA_SxCR_CHSEL_0 ) | // Channel 0
+			(1 * DMA_SxCR_PL_0 ) | // Priority 1
+			(1 * DMA_SxCR_PSIZE_0 ) | // PSIZE = 16 bit
+			(1 * DMA_SxCR_MSIZE_0 ) | // MSIZE = 16 bit
+			DMA_SxCR_MINC | // Increase memory address
+			(1 * DMA_SxCR_DIR_0 ) | // Memory to peripheral
+			DMA_SxCR_TCIE; // Transfer complete interrupt
+	DMA1_Stream7 ->NDTR = NextBufferLength;
+	DMA1_Stream7 ->PAR = (uint32_t) &SPI3 ->DR;
+	DMA1_Stream7 ->M0AR = (uint32_t) NextBufferSamples;
+	DMA1_Stream7 ->FCR = DMA_SxFCR_DMDIS;
+	DMA1_Stream7 ->CR |= DMA_SxCR_EN;
+//	HAL_DMA_Start_IT(&hdma_spi3_tx, NextBufferSamples, &SPI3 ->DR, NextBufferLength)ChangeMemory(&hdma_spi3_tx, Address, memory);
 	// Update state.
 	NextBufferSamples = NULL;
 	BufferNumber ^= 1;
 	DMARunning = true;
 
 	// Invoke callback if it exists to queue up another buffer.
-	if (CallbackFunction)
-		CallbackFunction(CallbackContext, BufferNumber);
+	if (CallbackFunction){
+		if(CallbackFunction(CallbackContext, BufferNumber)){
+//			NextBufferSamples = NULL;
+//			DMARunning = false;
+		}
+	}
 }
 
 static void StopAudioDMA() {
-//	DMA1_Stream7 ->CR &= ~DMA_SxCR_EN; // Disable DMA stream.
-//	while (DMA1_Stream7 ->CR & DMA_SxCR_EN )
+	DMA1_Stream7 ->CR &= ~DMA_SxCR_EN; // Disable DMA stream.
+	while (DMA1_Stream7 ->CR & DMA_SxCR_EN )
 //		; // Wait for DMA stream to stop.
-	HAL_I2S_DMAPause(&hi2s3);
-
+//	HAL_I2S_DMAPause(&hi2s3);
+//	HAL_I2S_DMAStop(&hi2s3);
 	DMARunning = false;
 }
 
 void AudioDMA_IRQHandler() {
 //	DMA1 ->HIFCR |= DMA_HIFCR_CTCIF7; // Clear interrupt flag.
-
+	send_uart(" sent");
 	if (NextBufferSamples) {
 		StartAudioDMAAndRequestBuffers();
 	} else {

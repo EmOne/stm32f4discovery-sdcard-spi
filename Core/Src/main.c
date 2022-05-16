@@ -38,6 +38,7 @@
 #include "mp3dec.h"
 #include "Audio.h"
 #include <string.h>
+#include "i2s.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -77,7 +78,7 @@ volatile uint32_t		time_var1, time_var2;
 //USBH_HOST				USB_Host;
 //RCC_ClocksTypeDef		RCC_Clocks;
 volatile int			enum_done = 0;
-
+volatile bool DMARunning;
 // MP3 Variables
 #define FILE_READ_BUFFER_SIZE 8192
 MP3FrameInfo			mp3FrameInfo;
@@ -85,7 +86,7 @@ HMP3Decoder				hMP3Decoder;
 FIL						file;
 char					file_read_buffer[FILE_READ_BUFFER_SIZE];
 volatile int			bytes_left;
-char					*read_ptr;
+static char					*read_ptr;
 
 /* USER CODE END PV */
 
@@ -99,7 +100,7 @@ int buf_size (char* buf);
 void buf_clear (void);
 
 // Private function prototypes
-static void AudioCallback(void *context,int buffer);
+static int AudioCallback(void *context,int buffer);
 static uint32_t Mp3ReadId3V2Tag(FIL* pInFile, char* pszArtist,
 		uint32_t unArtistSize, char* pszTitle, uint32_t unTitleSize,
 		char* pszContentType, uint32_t unContentTypeSize);
@@ -113,7 +114,7 @@ static FRESULT play_directory (const char* path, unsigned char seek);
 void send_uart (char* str)
 {
 	int len = strlen(str);
-	HAL_UART_Transmit(&huart2, (uint8_t *) str, len, 2000);
+	HAL_UART_Transmit(&huart2, (uint8_t *) str, len, 100);
 }
 
 int buf_size (char* buf)
@@ -161,11 +162,11 @@ int main(void)
   MX_GPIO_Init();
   MX_DMA_Init();
   MX_I2C1_Init();
-  MX_USB_HOST_Init();
-  MX_ADC1_Init();
-  MX_RTC_Init();
+//  MX_USB_HOST_Init();
+//  MX_ADC1_Init();
+//  MX_RTC_Init();
   MX_SPI2_Init();
-  MX_TIM10_Init();
+//  MX_TIM10_Init();
   MX_USART2_UART_Init();
   MX_FATFS_Init();
   MX_USART3_UART_Init();
@@ -209,7 +210,8 @@ int main(void)
 //	/* Close file */
 //	fresult = f_close(&fil);
 	InitializeAudio(Audio48000HzSettings);
-				AudioOn();
+	SetAudioVolume(75);
+	AudioOn();
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -217,13 +219,12 @@ int main(void)
   while (1)
   {
     /* USER CODE END WHILE */
-    MX_USB_HOST_Process();
+//    MX_USB_HOST_Process();
 
     /* USER CODE BEGIN 3 */
-//	if (enum_done >= 2) {
-//		enum_done = 0;
+	if (USER_press) {
 		play_directory("", 0);
-//	}
+	}
   }
   /* USER CODE END 3 */
 }
@@ -321,10 +322,9 @@ static FRESULT play_directory (const char* path, unsigned char seek) {
 	char buffer[200];
 #if _USE_LFN
 	static TCHAR lfn[_MAX_LFN + 1];
-//	fno.fname = lfn;
+	strcpy(fno.fname, lfn);
 	fno.fsize = sizeof(lfn);
 #endif
-
 
 	res = f_opendir(&dir, path); /* Open the directory */
 	if (res == FR_OK) {
@@ -353,9 +353,15 @@ static FRESULT play_directory (const char* path, unsigned char seek) {
 						continue;
 					}
 
-
+//					InitializeAudio(Audio48000HzSettings);
+//					SetAudioVolume(100);
+//					AudioOn();
 
 					play_mp3(buffer);
+
+//					SetAudioVolume(0);
+//					AudioOff();
+
 					send_uart(" -> Done!!!");
 					// Wait for user button release
 //					while(!USER_press);
@@ -393,7 +399,7 @@ static void play_mp3(char* filename) {
 			// Play mp3
 			hMP3Decoder = MP3InitDecoder();
 
-			PlayAudioWithCallback(AudioCallback, NULL);
+			PlayAudioWithCallback(AudioCallback, &file);
 
 			for(;;) {
 				/*
@@ -406,8 +412,11 @@ static void play_mp3(char* filename) {
 				 * file system should not cause problems.
 				 */
 				if (bytes_left < (FILE_READ_BUFFER_SIZE / 2)) {
-					// Copy rest of data to beginning of read buffer
-					memcpy(file_read_buffer, read_ptr, bytes_left);
+
+					if (read_ptr != NULL && bytes_left > 0) {
+						// Copy rest of data to beginning of read buffer
+						memcpy(file_read_buffer, read_ptr, bytes_left);
+					}
 
 					// Update read pointer for audio sampling
 					read_ptr = file_read_buffer;
@@ -420,22 +429,36 @@ static void play_mp3(char* filename) {
 					bytes_left = FILE_READ_BUFFER_SIZE;
 
 					// Out of data or error ... Stop playback!
-					if (br < btr || res != FR_OK) {
-						StopAudio();
-//
-//						// Re-initialize and set volume to avoid noise
-//						InitializeAudio(Audio48000HzSettings);
-//						SetAudioVolume(0);
-//						AudioOff();
+					if (br < btr || res != FR_OK || USER_press) {
+//						AudioCallback(&file, 0);
+//						StopAudio();
+						while (DMARunning);
 						// Close currently open file
 						f_close(&file);
 
 						// Return to previous function
 						return;
+					} else {
+						PlayAudioWithCallback(AudioCallback, &file);
 					}
-				} else {
-
 				}
+
+//				if (!DMARunning) {
+//					if((file.fptr + bytes_left) < file.obj.objsize){
+//						res = f_read(&file, file_read_buffer, bytes_left, &br);
+//						// Update read pointer for audio sampling
+//						read_ptr = file_read_buffer;
+//						if (AudioCallback(&file, 0)) {
+//							DMARunning = false;
+//						}
+//					} else {
+////						StopAudio();
+//						f_close(&file);
+//						return;
+//					}
+//				} else {
+//
+//				}
 			}
 		} else {
 			f_close(&file);
@@ -451,14 +474,15 @@ static void play_mp3(char* filename) {
  * CODEC using DMA). One mp3 frame is decoded at a time and
  * provided to the audio driver.
  */
-static void AudioCallback(void *context, int buffer) {
+static int AudioCallback(void *context, int buffer) {
 	static int16_t audio_buffer0[4096];
 	static int16_t audio_buffer1[4096];
 
 	char show_byte_left[32];
-	int offset, err;
+	int offset, err = 0;
 	int outOfData = 0;
 
+	FIL* f = (FIL*) context;
 	int16_t *samples;
 
 	if (buffer) {
@@ -480,37 +504,62 @@ static void AudioCallback(void *context, int buffer) {
 	if (err) {
 		/* error occurred */
 		switch (err) {
-		case ERR_MP3_INDATA_UNDERFLOW:
-			outOfData = 1;
-			break;
 		case ERR_MP3_MAINDATA_UNDERFLOW:
-			/* do nothing - next call to decode will provide more mainData */
-			break;
+//			/* do nothing - next call to decode will provide more mainData */
+//			break;
+		case ERR_MP3_INDATA_UNDERFLOW:
 		case ERR_MP3_FREE_BITRATE_SYNC:
 		default:
 			outOfData = 1;
 			break;
 		}
-	} else {
+	}
+
+	sprintf(show_byte_left, "\r\n remain %d bytes : %ld/%ld ", bytes_left, f->fptr - bytes_left, f->obj.objsize);
+	send_uart(show_byte_left);
+
+	if (!outOfData) {
 		// no error
 		MP3GetLastFrameInfo(hMP3Decoder, &mp3FrameInfo);
 
 		// Duplicate data in case of mono to maintain playback speed
 		if (mp3FrameInfo.nChans == 1) {
-			for(int i = mp3FrameInfo.outputSamps;i >= 0;i--) 	{
-				samples[2 * i]=samples[i];
-				samples[2 * i + 1]=samples[i];
+			for (int i = mp3FrameInfo.outputSamps; i >= 0; i--) {
+				samples[2 * i] = samples[i];
+				samples[2 * i + 1] = samples[i];
 			}
 			mp3FrameInfo.outputSamps *= 2;
 		}
+		if (mp3FrameInfo.samprate != hi2s3.Init.AudioFreq) {
+			__HAL_I2S_DISABLE(&hi2s3);
+			hi2s3.Init.AudioFreq =
+					mp3FrameInfo.samprate != 0 ?
+							mp3FrameInfo.samprate : I2S_AUDIOFREQ_DEFAULT;
+			hi2s3.Instance = SPI3;
+			hi2s3.Init.Mode = I2S_MODE_MASTER_TX;
+			hi2s3.Init.Standard = I2S_STANDARD_PHILIPS;
+			hi2s3.Init.DataFormat = I2S_DATAFORMAT_16B;
+			hi2s3.Init.MCLKOutput = I2S_MCLKOUTPUT_ENABLE;
+			hi2s3.Init.CPOL = I2S_CPOL_LOW;
+			hi2s3.Init.ClockSource = I2S_CLOCK_PLL;
+			hi2s3.Init.FullDuplexMode = I2S_FULLDUPLEXMODE_DISABLE;
+			if (HAL_I2S_Init(&hi2s3) != HAL_OK) {
+				Error_Handler();
+			}
+			__HAL_I2S_ENABLE(&hi2s3);
+		}
+		if(mp3FrameInfo.outputSamps > 0)
+			ProvideAudioBuffer(samples, mp3FrameInfo.outputSamps);
+		else
+			bytes_left = 0;
 	}
-
-	sprintf(show_byte_left, "\r\n remain %d bytes : %d ", bytes_left, offset);
-	send_uart(show_byte_left);
-
-	if (!outOfData) {
-		ProvideAudioBuffer(samples, mp3FrameInfo.outputSamps);
+	else
+	{
+		bytes_left = 0;
+		sprintf(show_byte_left, "\r\n Out of data!!! err=%d", err);
+		send_uart(show_byte_left);
 	}
+	return outOfData;
 }
 
 /*
@@ -694,10 +743,6 @@ static uint32_t Mp3ReadId3V2Tag(FIL* pInFile, char* pszArtist, uint32_t unArtist
 	return 0;
 }
 
-void HAL_I2S_TxHalfCpltCallback(I2S_HandleTypeDef *hi2s)
-{
-
-}
 void HAL_I2S_TxCpltCallback(I2S_HandleTypeDef *hi2s)
 {
 	send_uart(" sent");

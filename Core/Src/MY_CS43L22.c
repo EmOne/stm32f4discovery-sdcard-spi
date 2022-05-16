@@ -84,7 +84,13 @@ void CS43_Init(I2C_HandleTypeDef* i2c_handle, CS43_MODE outputMode)
 	write_register(POWER_CONTROL2,&iData[1]);
 
 	//(4): Automatic clock detection
-	iData[1] = (1 << 7);
+	read_register(CLOCKING_CONTROL, &iData[1]);
+	iData[1] = (1 << 7); //AUTO
+//	iData[1] |= (3 << 5); //SPEED[1:0]
+//	iData[1] &= ~(1 << 4); //32K GROUP
+//	iData[1] |= (1 << 3); //VIDEO CLK
+//	iData[1] |= (1 << 1); //RATIO[1:0]
+//	iData[1] &= ~(1 << 0); //MCLK DIV/2
 	write_register(CLOCKING_CONTROL,&iData[1]);
 
 	//(5): Interface control 1

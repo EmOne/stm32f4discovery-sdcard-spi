@@ -4,7 +4,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-typedef void AudioCallbackFunction(void *context,int buffer);
+typedef int AudioCallbackFunction(void *context,int buffer);
 
 #define Audio8000HzSettings 256,5,12,1
 #define Audio16000HzSettings 213,2,13,0
