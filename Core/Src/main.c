@@ -82,11 +82,11 @@ volatile uint32_t SD_Detect = 1;
 volatile uint32_t USER_press = 0;
 
 // Variables
-volatile uint32_t		time_var1, time_var2;
+//volatile uint32_t		time_var1, time_var2;
 //USB_OTG_CORE_HANDLE		USB_OTG_Core;
 //USBH_HOST				USB_Host;
 //RCC_ClocksTypeDef		RCC_Clocks;
-volatile int			enum_done = 0;
+int			enum_done = 0;
 volatile bool DMARunning;
 // MP3 Variables
 #define FILE_READ_BUFFER_SIZE 8192
@@ -322,6 +322,10 @@ int main(void)
     MX_USB_HOST_Process();
 
     /* USER CODE BEGIN 3 */
+    if (enum_done > 0) {
+		play_directory("", 0);
+		enum_done = 0;
+	}
 //    TWiMODLRHCI.Process();
 //	if (USER_press) {
 //		play_directory("", 0);
@@ -388,7 +392,7 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 	 	case GPIO_PIN_0:
 			if (HAL_GPIO_ReadPin(B1_GPIO_Port, B1_Pin) == GPIO_PIN_SET) {
 				USER_press = 1;
-				SendCData(2, sensor_data, 4);
+				SendUData(2, sensor_data, 2);
 			} else {
 				USER_press = 0;
 			}
@@ -444,21 +448,22 @@ static FRESULT play_directory (const char* path, unsigned char seek) {
 #else
 			fn = fno.fname;
 #endif
-			if (fno.fattrib & AM_DIR) { /* It is a directory */
-
-			} else { /* It is a file. */
-				sprintf(buffer, "%s/%s", path, fn);
+//			if (fno.fattrib & AM_DIR) { /* It is a directory */
+//
+//			} else { /* It is a file. */
+				sprintf(buffer, "%s/%02d.mp3", path, enum_done);
+//				sprintf(buffer, "%s/%s", path, fn);
 				send_uart("Playback: ");
 				send_uart(buffer);
 
 				// Check if it is an mp3 file
-				if (strcmp("mp3", get_filename_ext(buffer)) == 0) {
-
-					// Skip "seek" number of mp3 files...
-					if (seek) {
-						seek--;
-						continue;
-					}
+//				if (strcmp("mp3", get_filename_ext(buffer)) == 0) {
+//
+//					// Skip "seek" number of mp3 files...
+//					if (seek) {
+//						seek--;
+//						continue;
+//					}
 
 //					InitializeAudio(Audio48000HzSettings);
 //					SetAudioVolume(100);
@@ -473,11 +478,14 @@ static FRESULT play_directory (const char* path, unsigned char seek) {
 					// Wait for user button release
 //					while(!USER_press);
 					HAL_Delay(1000);
-				}
-				else
-					send_uart(" -> This file isn't MP3 file!!!");
+					return res;
+//				}
+//				else
+//				{
+//					send_uart(" -> This file isn't MP3 file!!!");
+//				}
 				send_uart("\r\n");
-			}
+//			}
 		}
 	}
 
@@ -505,7 +513,7 @@ static void play_mp3(char* filename) {
 		{
 			// Play mp3
 			hMP3Decoder = MP3InitDecoder();
-
+			AudioOn();
 			PlayAudioWithCallback(AudioCallback, &file);
 
 			for(;;) {
@@ -613,7 +621,7 @@ static int AudioCallback(void *context, int buffer) {
 		switch (err) {
 		case ERR_MP3_MAINDATA_UNDERFLOW:
 //			/* do nothing - next call to decode will provide more mainData */
-//			break;
+			break;
 		case ERR_MP3_INDATA_UNDERFLOW:
 		case ERR_MP3_FREE_BITRATE_SYNC:
 		default:
@@ -906,6 +914,14 @@ int loraDataRx(uint8_t fport, uint8_t* data, size_t len)
 //        ev.commu = RUNNING;
       }
       break;
+    case 0x12:
+    	sensor_data[0] = data[0];
+    	//Signal tower R/G
+    	HAL_GPIO_WritePin(RELAY_1_GPIO_Port, RELAY_1_Pin, (sensor_data[0] >> 7) & 0x1);
+    	HAL_GPIO_WritePin(RELAY_2_GPIO_Port, RELAY_2_Pin, (sensor_data[0] >> 6) & 0x1);
+    	//Select message to play back
+    	enum_done = sensor_data[0] & 0x3F;
+    	break;
     case 0xFF:
       if(len > 0)
       {

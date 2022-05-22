@@ -109,19 +109,18 @@ void InitializeAudio(int plln, int pllr, int i2sdiv, int i2sodd) {
 }
 
 void AudioOn() {
-	HAL_I2S_DMAResume(&hi2s3);
 	CS43_Start();
 
 //	WriteRegister(0x02, 0x9e);
-//	SPI3 ->I2SCFGR = SPI_I2SCFGR_I2SMOD | SPI_I2SCFGR_I2SCFG_1
-//			| SPI_I2SCFGR_I2SE; // Master transmitter, Phillips mode, 16 bit values, clock polarity low, enable.
+	SPI3 ->I2SCFGR = SPI_I2SCFGR_I2SMOD | SPI_I2SCFGR_I2SCFG_1
+			| SPI_I2SCFGR_I2SE; // Master transmitter, Phillips mode, 16 bit values, clock polarity low, enable.
 }
 
 void AudioOff() {
 	CS43_Stop();
-	StopAudio();
+//	StopAudio();
 //	WriteRegister(0x02, 0x01);
-//	SPI3 ->I2SCFGR = 0;
+	SPI3 ->I2SCFGR = 0;
 }
 
 void SetAudioVolume(int volume) {
@@ -147,7 +146,7 @@ void PlayAudioWithCallback(AudioCallbackFunction *callback, void *context) {
 	HAL_NVIC_SetPriority(DMA1_Stream7_IRQn, 0, 0);
 	NVIC_EnableIRQ(DMA1_Stream7_IRQn);
 
-//	SPI3 ->CR2 |= SPI_CR2_TXDMAEN; // Enable I2S TX DMA request.
+	SPI3 ->CR2 |= SPI_CR2_TXDMAEN; // Enable I2S TX DMA request.
 //	HAL_I2S_DMAResume(&hi2s3);
 
 	CallbackFunction = callback;
@@ -254,7 +253,7 @@ static void StopAudioDMA() {
 }
 
 void AudioDMA_IRQHandler() {
-//	DMA1 ->HIFCR |= DMA_HIFCR_CTCIF7; // Clear interrupt flag.
+	DMA1 ->HIFCR |= DMA_HIFCR_CTCIF7; // Clear interrupt flag.
 //	send_uart(" sent");
 	if (NextBufferSamples) {
 		StartAudioDMAAndRequestBuffers();
