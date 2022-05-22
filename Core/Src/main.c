@@ -20,9 +20,11 @@
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include "adc.h"
+#include "crc.h"
 #include "dma.h"
 #include "fatfs.h"
 #include "i2c.h"
+#include "rng.h"
 #include "rtc.h"
 #include "spi.h"
 #include "tim.h"
@@ -39,6 +41,13 @@
 #include "Audio.h"
 #include <string.h>
 #include "i2s.h"
+
+//#include "WiMODLRHCI.h"
+//#include "WiMODLoRaWAN.h"
+#include "WiMOD_LoRaWAN_API.h"
+#include "WiMOD_HCI_Layer.h"
+#include "SerialDevice.h"
+#include "emod_uart.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -87,7 +96,21 @@ FIL						file;
 char					file_read_buffer[FILE_READ_BUFFER_SIZE];
 volatile int			bytes_left;
 static char					*read_ptr;
+//TWiMODLORAWAN_ActivateDeviceData activationData;
+const char appKey[16] = { 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0f, 0x10 };
+const char devEUI[8] = { 0x70, 0xB3, 0xD5, 0x8F, 0xFF, 0xFF, 0xFF, 0xFF };
+const char appEUI[8] = { 0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF, 0x11, 0x22 };
 
+const char NWKSKEY[16] = { 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0f, 0x10 };
+const char APPSKEY[16] = { 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0f, 0x10 };
+//TWiMODLRResultCodes hciResult;
+UINT8 rspStatus;
+//TWiMODLORAWAN_RadioStackConfig hciRadio;
+//TWiMODLORAWAN_TX_Data lrwTxData;
+LoRa_App loraAppStatus;
+int __io_putchar(int ch);
+uint8_t sensor_data[4];
+//int __io_getchar(void);
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -106,6 +129,14 @@ static uint32_t Mp3ReadId3V2Tag(FIL* pInFile, char* pszArtist,
 		char* pszContentType, uint32_t unContentTypeSize);
 static void play_mp3(char* filename);
 static FRESULT play_directory (const char* path, unsigned char seek);
+
+//void JoinedNwkIndicationCallback(TWiMODLR_HCIMessage* rxMsg);
+//
+//void RxUDataIndicationCallback(TWiMODLR_HCIMessage* rxMsg);
+//
+//void RxCDataIndicationCallback(TWiMODLR_HCIMessage* rxMsg);
+//
+//void RxMacCmdIndicationCallback(TWiMODLR_HCIMessage* rxMsg);
 
 /* USER CODE END PFP */
 
@@ -162,15 +193,79 @@ int main(void)
   MX_GPIO_Init();
   MX_DMA_Init();
   MX_I2C1_Init();
-//  MX_USB_HOST_Init();
-//  MX_ADC1_Init();
-//  MX_RTC_Init();
+  MX_USB_HOST_Init();
+  MX_ADC1_Init();
+  MX_RTC_Init();
   MX_SPI2_Init();
-//  MX_TIM10_Init();
   MX_USART2_UART_Init();
   MX_FATFS_Init();
+  MX_TIM3_Init();
+  MX_TIM4_Init();
+  MX_CRC_Init();
+  MX_RNG_Init();
   MX_USART3_UART_Init();
+  MX_TIM1_Init();
   /* USER CODE BEGIN 2 */
+
+  /* emWIMOD Intialize */
+  HAL_GPIO_WritePin(WIMOD_RST_GPIO_Port, WIMOD_RST_Pin, GPIO_PIN_RESET);
+
+  for (volatile int i = 0; i < 0x4fff; i++) {
+	  __asm__ volatile("nop");
+  }
+
+  HAL_GPIO_WritePin(WIMOD_RST_GPIO_Port, WIMOD_RST_Pin, GPIO_PIN_SET);
+#ifdef EM_WIMOD
+  //  TWiMODLRHCI.begin(&huart3);
+  //  WiMODLoRaWAN.Reset(&hciResult, &rspStatus);
+  //  WiMODLoRaWAN.beginAndAutoSetup();
+  //  activationData.DeviceAddress = WIMOD_DEV_ADDR;
+  //  memcpy(activationData.NwkSKey, NWKSKEY, 16);
+  //  memcpy(activationData.AppSKey, APPSKEY, 16);
+  //  WiMODLoRaWAN.RegisterRxCDataIndicationClient(RxCDataIndicationCallback);
+  //  WiMODLoRaWAN.RegisterRxUDataIndicationClient(RxUDataIndicationCallback);
+  //  WiMODLoRaWAN.RegisterRxMacCmdIndicationClient(RxMacCmdIndicationCallback);
+  //  WiMODLoRaWAN.RegisterJoinedNwkIndicationClient(JoinedNwkIndicationCallback);
+  //  WiMODLoRaWAN.RegisterRxAckIndicationClient(NULL);
+  //  WiMODLoRaWAN.RegisterTxUDataIndicationClient(NULL);
+  //  WiMODLoRaWAN.RegisterTxCDataIndicationClient(NULL);
+  //  WiMODLoRaWAN.RegisterNoDataIndicationClient(NULL);
+  //  WiMODLoRaWAN.RegisterJoinTxIndicationClient(NULL);
+  //  do{
+  //	  WiMODLoRaWAN.Ping(&hciResult, &rspStatus);
+  //  }  while (hciResult);
+  //  WiMODLoRaWAN.DeactivateDevice(&hciResult, &rspStatus);
+  //  hciRadio.BandIndex = LORAWAN_BAND_AS_923_TH_920;
+  //  hciRadio.DataRateIndex = LORAWAN_DATA_RATE_AS923_LORA_SF10_125KHZ;
+  //  hciRadio.TXPowerLevel = LORAWAN_TX_POWER_LEVEL_MAX;
+  //  hciRadio.Retransmissions = 7;
+  //  hciRadio.HeaderMacCmdCapacity = 15;
+  //  hciRadio.PowerSavingMode = LORAWAN_POWER_SAVING_MODE_AUTO;
+  //  hciRadio.Options = LORAWAN_STK_OPTION_ADR | LORAWAN_STK_OPTION_DUTY_CYCLE_CTRL |
+  //		  LORAWAN_STK_OPTION_EXT_PKT_FORMAT |LORAWAN_STK_OPTION_DEV_CLASS_C;
+  //  WiMODLoRaWAN.SetRadioStackConfig(&hciRadio, &hciResult, &rspStatus);
+  //  WiMODLoRaWAN.ActivateDevice(&activationData, &hciResult, &rspStatus);
+
+#else
+
+  WiMOD_LoRaWAN_Init(&huart3);
+  Ping();
+  HAL_Delay(200);
+  Deactivate();
+  HAL_Delay(500);
+  SetRadioStack();
+  HAL_Delay(1000);
+  loraAppStatus.devAddr.u32 = 0x00000022;
+  memcpy(loraAppStatus.nwkSKey, NWKSKEY, sizeof(loraAppStatus.nwkSKey));
+  memcpy(loraAppStatus.appSKey, APPSKEY, sizeof(loraAppStatus.appSKey));
+  memcpy(loraAppStatus.devEUI, devEUI, sizeof(loraAppStatus.devEUI));
+  memcpy(loraAppStatus.appKey, appKey, sizeof(loraAppStatus.appKey));
+  memcpy(loraAppStatus.appEUI, appEUI, sizeof(loraAppStatus.appEUI));
+
+  ActivateABP();
+  HAL_Delay(2000);
+#endif
+
   /* Mount SD card */
   HAL_GPIO_WritePin(LD4_GPIO_Port, LD4_Pin, GPIO_PIN_SET);
   while (SD_Detect) {
@@ -210,8 +305,13 @@ int main(void)
 //	/* Close file */
 //	fresult = f_close(&fil);
 	InitializeAudio(Audio48000HzSettings);
-	SetAudioVolume(75);
+	SetAudioVolume(50);
 	AudioOn();
+
+  HAL_TIM_Base_Start_IT(&htim3);
+  HAL_TIM_Base_Start_IT(&htim4);
+  HAL_TIM_Base_Start_IT(&htim1);
+
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -219,12 +319,18 @@ int main(void)
   while (1)
   {
     /* USER CODE END WHILE */
-//    MX_USB_HOST_Process();
+    MX_USB_HOST_Process();
 
     /* USER CODE BEGIN 3 */
-	if (USER_press) {
-		play_directory("", 0);
-	}
+//    TWiMODLRHCI.Process();
+//	if (USER_press) {
+//		play_directory("", 0);
+//		lrwTxData.Port = 2;
+//		strcpy(lrwTxData.Payload, "Hello");
+//		lrwTxData.Length = strlen(lrwTxData.Payload);
+//		WiMODLoRaWAN.SendData(&lrwTxData, &hciResult, &rspStatus);
+//	}
+
   }
   /* USER CODE END 3 */
 }
@@ -282,6 +388,7 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 	 	case GPIO_PIN_0:
 			if (HAL_GPIO_ReadPin(B1_GPIO_Port, B1_Pin) == GPIO_PIN_SET) {
 				USER_press = 1;
+				SendCData(2, sensor_data, 4);
 			} else {
 				USER_press = 0;
 			}
@@ -555,7 +662,7 @@ static int AudioCallback(void *context, int buffer) {
 	}
 	else
 	{
-		bytes_left = 0;
+		bytes_left = (bytes_left < (FILE_READ_BUFFER_SIZE / 2)) ? bytes_left : 0 ;
 		sprintf(show_byte_left, "\r\n Out of data!!! err=%d", err);
 		send_uart(show_byte_left);
 	}
@@ -751,6 +858,86 @@ void HAL_I2S_TxCpltCallback(I2S_HandleTypeDef *hi2s)
 void HAL_I2S_ErrorCallback(I2S_HandleTypeDef *hi2s)
 {
 	Error_Handler();
+}
+
+//void JoinedNwkIndicationCallback(TWiMODLR_HCIMessage* rxMsg)
+//{
+//
+//}
+//
+//void RxUDataIndicationCallback(TWiMODLR_HCIMessage* rxMsg)
+//{
+//
+//}
+//
+//void RxCDataIndicationCallback(TWiMODLR_HCIMessage* rxMsg)
+//{
+//
+//}
+//
+//void RxMacCmdIndicationCallback(TWiMODLR_HCIMessage* rxMsg)
+//{
+//
+//}
+
+int WiMOD_Error_Handler(void* obj)
+{
+	TWiMOD_HCI_Message*  rxMessage;
+	if (obj != NULL) {
+		rxMessage = obj;
+		printf("ERR: SID:%d, MID:%d, s:%x\r\n", rxMessage->SapID, rxMessage->MsgID, rxMessage->State);
+	}
+
+}
+
+int loraDataRx(uint8_t fport, uint8_t* data, size_t len)
+{
+    switch(fport) {
+    case 99:
+       //Restart system
+      NVIC_SystemReset();
+      break;
+
+    case 3:
+      if(len == 1) {
+        //lora tx perior
+//        sData_t.period =
+    	  loraAppStatus.period = *data;
+//        ev.commu = RUNNING;
+      }
+      break;
+    case 0xFF:
+      if(len > 0)
+      {
+        if(*data == 0x1)
+        {
+          printf("Acknowledges ResetInd command\r\n");
+        }
+      }
+      break;
+    default: break;
+    };
+    return 0;
+}
+/**
+ * @brief		Trace output for standard output
+ */
+int fputc(int ch, FILE *f) {
+  return ITM_SendChar(ch);
+}
+
+int __io_putchar(int ch) {
+  return HAL_UART_Transmit(&huart2, (uint8_t *)&ch, 1, 500) == HAL_OK ? 0 : -1;
+}
+
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
+{
+ if(huart->Instance == USART2){
+	 emod_RxCpltCallback(huart);
+ } else if (huart->Instance == USART3){
+	 USART_ITCharManager(huart);
+	 WiMOD_LoRaWAN_Process();
+ }
 }
 /* USER CODE END 4 */
 

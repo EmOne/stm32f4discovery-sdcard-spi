@@ -73,8 +73,6 @@ void Error_Handler(void);
 #define SD_CD_Pin GPIO_PIN_1
 #define SD_CD_GPIO_Port GPIOC
 #define SD_CD_EXTI_IRQn EXTI1_IRQn
-#define PDM_OUT_Pin GPIO_PIN_3
-#define PDM_OUT_GPIO_Port GPIOC
 #define B1_Pin GPIO_PIN_0
 #define B1_GPIO_Port GPIOA
 #define B1_EXTI_IRQn EXTI0_IRQn
@@ -88,8 +86,12 @@ void Error_Handler(void);
 #define SPI1_MOSI_GPIO_Port GPIOA
 #define BOOT1_Pin GPIO_PIN_2
 #define BOOT1_GPIO_Port GPIOB
-#define CLK_IN_Pin GPIO_PIN_10
-#define CLK_IN_GPIO_Port GPIOB
+#define WIMOD_RST_Pin GPIO_PIN_12
+#define WIMOD_RST_GPIO_Port GPIOE
+#define WIMOD_TX_Pin GPIO_PIN_10
+#define WIMOD_TX_GPIO_Port GPIOB
+#define WIMOD_RX_Pin GPIO_PIN_11
+#define WIMOD_RX_GPIO_Port GPIOB
 #define SD_CS_Pin GPIO_PIN_12
 #define SD_CS_GPIO_Port GPIOB
 #define SD_SCK_Pin GPIO_PIN_13
@@ -108,6 +110,8 @@ void Error_Handler(void);
 #define LD6_GPIO_Port GPIOD
 #define I2S3_MCK_Pin GPIO_PIN_7
 #define I2S3_MCK_GPIO_Port GPIOC
+#define RELAY_1_Pin GPIO_PIN_8
+#define RELAY_1_GPIO_Port GPIOC
 #define VBUS_FS_Pin GPIO_PIN_9
 #define VBUS_FS_GPIO_Port GPIOA
 #define OTG_FS_ID_Pin GPIO_PIN_10
@@ -128,6 +132,8 @@ void Error_Handler(void);
 #define Audio_RST_GPIO_Port GPIOD
 #define OTG_FS_OverCurrent_Pin GPIO_PIN_5
 #define OTG_FS_OverCurrent_GPIO_Port GPIOD
+#define RELAY_2_Pin GPIO_PIN_7
+#define RELAY_2_GPIO_Port GPIOD
 #define SWO_Pin GPIO_PIN_3
 #define SWO_GPIO_Port GPIOB
 #define Audio_SCL_Pin GPIO_PIN_6

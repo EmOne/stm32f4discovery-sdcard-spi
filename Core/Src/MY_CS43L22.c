@@ -146,14 +146,14 @@ void CS43_Init(I2C_HandleTypeDef* i2c_handle, CS43_MODE outputMode)
 	read_register(PLAYBACK_CONTROL_2, &iData[1]);
 	iData[1] &= ~(3 << 6);	//HP Mute disable
 	iData[1] |= (3 << 4);	//SP Mute enable
-	iData[1] |= (1 << 3);	//SP A=B
+	iData[1] &= ~(1 << 3);	//SP A=B
 	iData[1] &= ~(1 << 2);	//Not swap channel
 	iData[1] |= (1 << 1);	//Mono
 	iData[1] &= ~(1 << 0);	//Disable mute 50/50
 	write_register(PLAYBACK_CONTROL_2,&iData[1]);
 
 	//(10): Set volume to default (0dB)
-	iData[1] = 0x00;
+	iData[1] = 0x18;
 	write_register(PASSTHROUGH_VOLUME_A,&iData[1]);
 	write_register(PASSTHROUGH_VOLUME_B,&iData[1]);
 	write_register(PCM_VOLUME_A,&iData[1]);

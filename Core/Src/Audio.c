@@ -142,12 +142,12 @@ void OutputAudioSampleWithoutBlocking(int16_t sample) {
 }
 
 void PlayAudioWithCallback(AudioCallbackFunction *callback, void *context) {
-	StopAudioDMA();
+//	StopAudioDMA();
 
 	HAL_NVIC_SetPriority(DMA1_Stream7_IRQn, 0, 0);
 	NVIC_EnableIRQ(DMA1_Stream7_IRQn);
 
-	SPI3 ->CR2 |= SPI_CR2_TXDMAEN; // Enable I2S TX DMA request.
+//	SPI3 ->CR2 |= SPI_CR2_TXDMAEN; // Enable I2S TX DMA request.
 //	HAL_I2S_DMAResume(&hi2s3);
 
 	CallbackFunction = callback;
@@ -178,16 +178,16 @@ bool ProvideAudioBufferWithoutBlocking(void *samples, int numsamples) {
 	if (NextBufferSamples)
 		return false;
 
+	NVIC_DisableIRQ(DMA1_Stream7_IRQn);
+
 	NextBufferSamples = samples;
 	NextBufferLength = numsamples;
 
 	if (!DMARunning) {
-		NVIC_DisableIRQ(DMA1_Stream7_IRQn);
-//		NVIC_DisableIRQ(SPI3_IRQn);
 		StartAudioDMAAndRequestBuffers();
 	}
+
 	NVIC_EnableIRQ(DMA1_Stream7_IRQn);
-//	NVIC_EnableIRQ(SPI3_IRQn);
 
 	return true;
 }
@@ -218,13 +218,7 @@ bool ProvideAudioBufferWithoutBlocking(void *samples, int numsamples) {
 
 static void StartAudioDMAAndRequestBuffers() {
 	// Configure DMA stream.
-
-//	if(HAL_I2S_Transmit_DMA(&hi2s3, (uint16_t*) NextBufferSamples, NextBufferLength) != HAL_OK)
-//	{
-//
-//	}
-	__HAL_I2S_ENABLE(&hi2s3);
-	SPI3 ->CR2 |= SPI_CR2_TXDMAEN; // Enable I2S TX DMA request.
+//	__HAL_I2S_ENABLE(&hi2s3);
 	DMA1_Stream7 ->CR = (0 * DMA_SxCR_CHSEL_0 ) | // Channel 0
 			(1 * DMA_SxCR_PL_0 ) | // Priority 1
 			(1 * DMA_SxCR_PSIZE_0 ) | // PSIZE = 16 bit
@@ -237,7 +231,8 @@ static void StartAudioDMAAndRequestBuffers() {
 	DMA1_Stream7 ->M0AR = (uint32_t) NextBufferSamples;
 	DMA1_Stream7 ->FCR = DMA_SxFCR_DMDIS;
 	DMA1_Stream7 ->CR |= DMA_SxCR_EN;
-//	HAL_DMA_Start_IT(&hdma_spi3_tx, NextBufferSamples, &SPI3 ->DR, NextBufferLength)ChangeMemory(&hdma_spi3_tx, Address, memory);
+	SPI3 ->CR2 |= SPI_CR2_TXDMAEN; // Enable I2S TX DMA request.
+
 	// Update state.
 	NextBufferSamples = NULL;
 	BufferNumber ^= 1;
@@ -254,16 +249,13 @@ static void StartAudioDMAAndRequestBuffers() {
 
 static void StopAudioDMA() {
 	DMA1_Stream7 ->CR &= ~DMA_SxCR_EN; // Disable DMA stream.
-	while (DMA1_Stream7 ->CR & DMA_SxCR_EN )
-//		; // Wait for DMA stream to stop.
-//	HAL_I2S_DMAPause(&hi2s3);
-//	HAL_I2S_DMAStop(&hi2s3);
+	while (DMA1_Stream7 ->CR & DMA_SxCR_EN ); // Wait for DMA stream to stop.
 	DMARunning = false;
 }
 
 void AudioDMA_IRQHandler() {
 //	DMA1 ->HIFCR |= DMA_HIFCR_CTCIF7; // Clear interrupt flag.
-	send_uart(" sent");
+//	send_uart(" sent");
 	if (NextBufferSamples) {
 		StartAudioDMAAndRequestBuffers();
 	} else {
