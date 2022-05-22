@@ -412,10 +412,12 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
-  if(htim->Instance == TIM10){
-
-  } else {
-
+  if(htim->Instance == TIM3)
+  {
+	  HAL_GPIO_TogglePin(LD4_GPIO_Port, LD4_Pin);
+  }
+  else if(htim->Instance == TIM4)
+  {
   }
 }
 
