@@ -97,6 +97,7 @@ char					file_read_buffer[FILE_READ_BUFFER_SIZE];
 volatile int			bytes_left;
 static char					*read_ptr;
 //TWiMODLORAWAN_ActivateDeviceData activationData;
+#define UID_ADDR 0x1FFF7A10
 const char appKey[16] = { 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0f, 0x10 };
 const char devEUI[8] = { 0x70, 0xB3, 0xD5, 0x8F, 0xFF, 0xFF, 0xFF, 0xFF };
 const char appEUI[8] = { 0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF, 0x11, 0x22 };
@@ -255,10 +256,12 @@ int main(void)
   HAL_Delay(500);
   SetRadioStack();
   HAL_Delay(1000);
-  loraAppStatus.devAddr.u32 = 0x00000022;
+  loraAppStatus.devAddr.u32 = *((uint32_t *) UID_ADDR);
+  memcpy(loraAppStatus.devEUI, devEUI, sizeof(loraAppStatus.devEUI));
+  memcpy(&loraAppStatus.devEUI[4], &loraAppStatus.devAddr.u8, 4);
   memcpy(loraAppStatus.nwkSKey, NWKSKEY, sizeof(loraAppStatus.nwkSKey));
   memcpy(loraAppStatus.appSKey, APPSKEY, sizeof(loraAppStatus.appSKey));
-  memcpy(loraAppStatus.devEUI, devEUI, sizeof(loraAppStatus.devEUI));
+
   memcpy(loraAppStatus.appKey, appKey, sizeof(loraAppStatus.appKey));
   memcpy(loraAppStatus.appEUI, appEUI, sizeof(loraAppStatus.appEUI));
 
