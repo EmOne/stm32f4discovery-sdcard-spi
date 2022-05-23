@@ -109,6 +109,7 @@ void InitializeAudio(int plln, int pllr, int i2sdiv, int i2sodd) {
 }
 
 void AudioOn() {
+	HAL_GPIO_WritePin(GPIOD, GPIO_PIN_4, GPIO_PIN_SET);
 	CS43_Start();
 
 //	WriteRegister(0x02, 0x9e);
@@ -117,10 +118,13 @@ void AudioOn() {
 }
 
 void AudioOff() {
+	StopAudioDMA();
 	CS43_Stop();
 //	StopAudio();
 //	WriteRegister(0x02, 0x01);
 	SPI3 ->I2SCFGR = 0;
+//	HAL_GPIO_WritePin(GPIOD, GPIO_PIN_4, GPIO_PIN_RESET);
+
 }
 
 void SetAudioVolume(int volume) {

@@ -40,6 +40,7 @@
 #include "mp3dec.h"
 #include "Audio.h"
 #include <string.h>
+#include <stdbool.h>
 #include "i2s.h"
 
 //#include "WiMODLRHCI.h"
@@ -78,11 +79,11 @@ UINT br, bw;  // File read/write count
 FATFS *pfs;
 DWORD fre_clust;
 uint32_t total, free_space;
-volatile uint32_t SD_Detect = 1;
-volatile uint32_t USER_press = 0;
+volatile bool SD_Detect = 1;
+static bool USER_press = 0;
 
 // Variables
-//volatile uint32_t		time_var1, time_var2;
+volatile uint32_t		time_var1 = 0, time_var2 = 0;
 //USB_OTG_CORE_HANDLE		USB_OTG_Core;
 //USBH_HOST				USB_Host;
 //RCC_ClocksTypeDef		RCC_Clocks;
@@ -208,7 +209,17 @@ int main(void)
   MX_TIM1_Init();
   /* USER CODE BEGIN 2 */
 
+  /* Check relay */
+  HAL_GPIO_WritePin(RELAY_1_GPIO_Port, RELAY_1_Pin, GPIO_PIN_SET);
+  HAL_GPIO_WritePin(RELAY_2_GPIO_Port, RELAY_2_Pin, GPIO_PIN_SET);
+  HAL_Delay(5000);
+  HAL_GPIO_WritePin(RELAY_1_GPIO_Port, RELAY_1_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(RELAY_2_GPIO_Port, RELAY_2_Pin, GPIO_PIN_RESET);
+
   /* emWIMOD Intialize */
+  HAL_TIM_Base_Start_IT(&htim4);
+  HAL_TIM_Base_Start_IT(&htim1);
+
   HAL_GPIO_WritePin(WIMOD_RST_GPIO_Port, WIMOD_RST_Pin, GPIO_PIN_RESET);
 
   for (volatile int i = 0; i < 0x4fff; i++) {
@@ -253,9 +264,13 @@ int main(void)
   Ping();
   HAL_Delay(200);
   Deactivate();
-  HAL_Delay(500);
+  HAL_Delay(1000);
+  SetOPMODE(3);
+  HAL_Delay(5000);
   SetRadioStack();
   HAL_Delay(1000);
+  SetOPMODE(0);
+  HAL_Delay(5000);
   loraAppStatus.devAddr.u32 = *((uint32_t *) UID_ADDR);
   memcpy(loraAppStatus.devEUI, devEUI, sizeof(loraAppStatus.devEUI));
   memcpy(&loraAppStatus.devEUI[4], &loraAppStatus.devAddr.u8, 4);
@@ -267,6 +282,7 @@ int main(void)
 
   ActivateABP();
   HAL_Delay(2000);
+  loraAppStatus.period = 60; //send status 60s default
 #endif
 
   /* Mount SD card */
@@ -312,9 +328,6 @@ int main(void)
 	AudioOn();
 
   HAL_TIM_Base_Start_IT(&htim3);
-  HAL_TIM_Base_Start_IT(&htim4);
-  HAL_TIM_Base_Start_IT(&htim1);
-
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -329,14 +342,19 @@ int main(void)
 		play_directory("", 0);
 		enum_done = 0;
 	}
+
 //    TWiMODLRHCI.Process();
-//	if (USER_press) {
+	if (USER_press) {
 //		play_directory("", 0);
 //		lrwTxData.Port = 2;
 //		strcpy(lrwTxData.Payload, "Hello");
 //		lrwTxData.Length = strlen(lrwTxData.Payload);
 //		WiMODLoRaWAN.SendData(&lrwTxData, &hciResult, &rspStatus);
-//	}
+
+
+	}
+	HAL_GPIO_WritePin(RELAY_1_GPIO_Port, RELAY_1_Pin, (sensor_data[0] >> 7) & 0x1);
+	HAL_GPIO_WritePin(RELAY_2_GPIO_Port, RELAY_2_Pin, (sensor_data[0] >> 6) & 0x1);
 
   }
   /* USER CODE END 3 */
@@ -389,41 +407,6 @@ void SystemClock_Config(void)
 }
 
 /* USER CODE BEGIN 4 */
-void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
-{
-	 switch (GPIO_Pin) {
-	 	case GPIO_PIN_0:
-			if (HAL_GPIO_ReadPin(B1_GPIO_Port, B1_Pin) == GPIO_PIN_SET) {
-				USER_press = 1;
-				SendUData(2, sensor_data, 2);
-			} else {
-				USER_press = 0;
-			}
-	 		break;
-		case GPIO_PIN_1:
-			if(HAL_GPIO_ReadPin(SD_CD_GPIO_Port, SD_CD_Pin) == GPIO_PIN_SET){
-				SD_Detect = 1;
-			}
-			else{
-				SD_Detect = 0;
-			}
-			break;
-		default:
-			break;
-	 }
-}
-
-void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
-{
-  if(htim->Instance == TIM3)
-  {
-	  HAL_GPIO_TogglePin(LD4_GPIO_Port, LD4_Pin);
-  }
-  else if(htim->Instance == TIM4)
-  {
-  }
-}
-
 const char *get_filename_ext(const char *filename) {
     const char *dot = strrchr(filename, '.');
     if(!dot || dot == filename) return "";
@@ -472,12 +455,12 @@ static FRESULT play_directory (const char* path, unsigned char seek) {
 
 //					InitializeAudio(Audio48000HzSettings);
 //					SetAudioVolume(100);
-//					AudioOn();
+					AudioOn();
 
 					play_mp3(buffer);
 
 //					SetAudioVolume(0);
-//					AudioOff();
+					AudioOff();
 
 					send_uart(" -> Done!!!");
 					// Wait for user button release
@@ -518,7 +501,7 @@ static void play_mp3(char* filename) {
 		{
 			// Play mp3
 			hMP3Decoder = MP3InitDecoder();
-			AudioOn();
+//			AudioOn();
 			PlayAudioWithCallback(AudioCallback, &file);
 
 			for(;;) {
@@ -871,6 +854,46 @@ void HAL_I2S_TxCpltCallback(I2S_HandleTypeDef *hi2s)
 void HAL_I2S_ErrorCallback(I2S_HandleTypeDef *hi2s)
 {
 	Error_Handler();
+}
+
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
+{
+  if(htim->Instance == TIM3)
+  {
+	  HAL_GPIO_TogglePin(LD4_GPIO_Port, LD4_Pin);
+	  if ((time_var1++ % loraAppStatus.period) == 0) {
+		  SendUData(2, sensor_data, 2);
+//		  time_var1 = 0;
+	  }
+  }
+  else if(htim->Instance == TIM4)
+  {
+	  time_var2++;
+  }
+}
+
+void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
+{
+	 switch (GPIO_Pin) {
+	 	case GPIO_PIN_0:
+			if (HAL_GPIO_ReadPin(B1_GPIO_Port, B1_Pin) == GPIO_PIN_SET) {
+				USER_press = 1;
+				SendUData(2, sensor_data, 2);
+			} else {
+				USER_press = 0;
+			}
+	 		break;
+		case GPIO_PIN_1:
+			if(HAL_GPIO_ReadPin(SD_CD_GPIO_Port, SD_CD_Pin) == GPIO_PIN_SET){
+				SD_Detect = 1;
+			}
+			else{
+				SD_Detect = 0;
+			}
+			break;
+		default:
+			break;
+	 }
 }
 
 //void JoinedNwkIndicationCallback(TWiMODLR_HCIMessage* rxMsg)
